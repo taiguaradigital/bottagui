@@ -26,8 +26,8 @@ I_want_money.get_currency()
 reset practice balance to $10000
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
-I_want_money=IQ_Option("email","password")
+from pyiqoptionapi.stable_api import IQOption
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 print(I_want_money.reset_practice_balance())
 ```
@@ -45,12 +45,12 @@ I_want_money.change_balance(MODE)
  
 ### sample
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import logging
 import time
  
 #logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 while_run_time=10
  
@@ -130,12 +130,12 @@ I_want_money.pop_live_deal(name,active,_type)
 
 ### sample 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import logging
 import time
  
 #logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 while_run_time=10
  

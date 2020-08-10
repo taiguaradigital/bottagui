@@ -15,11 +15,11 @@ DICT["forex"/"cfd"/"crypto"/"digital"/"turbo"/"binary"][Asset Name]["open"]
 it will return True/False
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import logging
 import random
 logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 ALL_Asset=I_want_money.get_all_open_time()
 #check if open or not
@@ -45,20 +45,20 @@ for type_name, data in ALL_Asset.items():
 ## View all ACTIVES Name
 
 ```
-print(I_want_money.get_all_ACTIVES_OPCODE())
+print(I_want_money.get_all_actives())
 ```
 ##  update ACTIVES OPCODE
 ```
-I_want_money.update_ACTIVES_OPCODE()
+I_want_money.update_actives()
 ```
 ## get_async_order()
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import logging
 import time
 #logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 ACTIVES="EURUSD"
 duration=1#minute 1 or 5
@@ -119,8 +119,8 @@ Sample code
 
 ```python
 import time
-from iqoptionapi.stable_api import IQ_Option
-I_want_money=IQ_Option("email","password")
+from pyiqoptionapi.stable_api import IQOption
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 #instrument_type: "binary-option"/"turbo-option"/"digital-option"/"crypto"/"forex"/"cfd"
 instrument_type=["binary-option","turbo-option","digital-option","crypto","forex","cfd"]
@@ -150,11 +150,11 @@ while True:
 
 instrument_type="binary-option"/"digital-option"/"forex"/"cfd"/"crypto"
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import logging
 import time
 #logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 instrument_type="digital-option"#"binary-option"/"digital-option"/"forex"/"cfd"/"crypto"
 I_want_money.subscribe_top_assets_updated(instrument_type)
@@ -197,7 +197,7 @@ I_want_money.unsubscribe_top_assets_updated(instrument_type)
 
 #### sample 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import logging
 import time
 import operator
@@ -206,10 +206,10 @@ import operator
 def opcode_to_name(opcode_data,opcode):
     return list(opcode_data.keys())[list(opcode_data.values()).index(opcode)]            
 
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
-I_want_money.update_ACTIVES_OPCODE()
-opcode_data=I_want_money.get_all_ACTIVES_OPCODE()
+I_want_money.update_actives()
+opcode_data=I_want_money.get_all_actives()
 
 instrument_type="digital-option"#"binary-option"/"digital-option"/"forex"/"cfd"/"crypto"
 I_want_money.subscribe_top_assets_updated(instrument_type)
@@ -245,8 +245,8 @@ I_want_money.unsubscribe_top_assets_updated(instrument_type)
 Get leader board data
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
-I_want_money=IQ_Option(email,password)
+from pyiqoptionapi.stable_api import IQOption
+I_want_money=IQOption(email,password)
 I_want_money.connect()#connect to iqoption
  
 country="TW"

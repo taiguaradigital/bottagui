@@ -15,9 +15,9 @@ I_want_money.get_candles(ACTIVES,interval,count,endtime)
 ### sample 
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import time
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 end_from_time=time.time()
 ANS=[]
@@ -35,11 +35,11 @@ print(ANS)
 ```python
 
 from talib.abstract import *
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import time
 import numpy as np
 print("login...")
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 goal="EURUSD"
 size=10#size=[1,5,10,15,30,60,120,300,600,900,1800,3600,7200,14400,28800,43200,86400,604800,2592000,"all"]
@@ -77,12 +77,12 @@ I_want_money.stop_candles_stream(goal,size)
 ### Sample
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import logging
 import time
 #logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
 print("login...")
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 goal="EURUSD"
 size="all"#size=[1,5,10,15,30,60,120,300,600,900,1800,3600,7200,14400,28800,43200,86400,604800,2592000,"all"]

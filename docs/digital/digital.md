@@ -6,10 +6,10 @@
 ### sample
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import time
 import random
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 ACTIVES="EURUSD"
 duration=1#minute 1 or 5
@@ -66,9 +66,9 @@ else:
 
 smaple 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import time
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 ACTIVES="EURUSD"
 duration=1#minute 1 or 5
@@ -116,9 +116,9 @@ buy the digit in current price
 return check and id
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
  
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 ACTIVES="EURUSD"
 duration=1#minute 1 or 5
@@ -136,8 +136,8 @@ get Profit After Sale(P/L)
 sample 
 
 ```python
-from iqoptionapi.stable_api import IQ_Option 
-I_want_money=IQ_Option("email","passord")
+from pyiqoptionapi.stable_api import IQOption 
+I_want_money=IQOption("email","passord")
 ACTIVES="EURUSD"
 duration=1#minute 1 or 5
 amount=100
@@ -155,11 +155,11 @@ while True:
 ### get_digital_current_profit()
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import time
 import logging
 #logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 ACTIVES="EURUSD"
 duration=1#minute 1 or 5
@@ -197,13 +197,13 @@ this api is asynchronous get id data,it only can get id data before you call the
 sample code
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import logging
 import random
 import time
 import datetime
 #logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 ACTIVES="EURUSD"
 duration=1#minute 1 or 5
@@ -234,11 +234,11 @@ I_want_money.close_digital_option(id)
 
 smaple1
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import logging
 import time
 #logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 ACTIVES="EURUSD-OTC"
 duration=1#minute 1 or 5

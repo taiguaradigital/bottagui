@@ -32,8 +32,8 @@ python setup.py install
 
 ```python
 import time
-from iqoptionapi.stable_api import IQ_Option
-I_want_money=IQ_Option("email","password")
+from pyiqoptionapi.stable_api import IQOption
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 goal="EURUSD"
 print("get candles")
@@ -43,7 +43,7 @@ print(I_want_money.get_candles(goal,60,111,time.time()))
 ## Import
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 ```
 ## Login
 
@@ -54,11 +54,11 @@ if connect sucess return True,None
 if connect fail return False,reason
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import logging
 
 logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 check, reason=I_want_money.connect()#connect to iqoption
 print(check, reason)
 ```
@@ -76,9 +76,9 @@ some time connect will close so this way can check connect and reconnect
 try close your network and restart network in this sample
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 error_password="""{"code":"invalid_credentials","message":"You entered the wrong credentials. Please check that the login/password is correct."}"""
-iqoption = IQ_Option("email", "password")
+iqoption = IQOption("email", "password")
 check,reason=iqoption.connect()
 if check:
     print("Start your robot")
@@ -107,11 +107,11 @@ else:
 Default User-Agent is "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36"
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import logging
 logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
  
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 
 #Default is "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36"
 
@@ -126,8 +126,8 @@ I_want_money.connect()#connect to iqoption
 ## Check version
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
-print(IQ_Option.__version__)
+from pyiqoptionapi.stable_api import IQOption
+print(IQOption.__version__)
 ```
 
 ## Check connect

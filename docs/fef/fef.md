@@ -8,8 +8,8 @@ search [instrument_type and instrument_id](instrument.txt)
 ## sample
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
-I_want_money=IQ_Option("email","password")
+from pyiqoptionapi.stable_api import IQOption
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 instrument_type="crypto"
 instrument_id="BTCUSD"
@@ -215,13 +215,13 @@ instrument_type="crypto","forex","fx-option","turbo-option","multi-option","cfd"
 get_position_history_v2(instrument_type,limit,offset,start,end)
 
 ```python
-from iqoptionapi.stable_api import IQ_Option
+from pyiqoptionapi.stable_api import IQOption
 import logging
 import random
 import time
 import datetime
 logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
-I_want_money=IQ_Option("email","password")
+I_want_money=IQOption("email","password")
 I_want_money.connect()#connect to iqoption
 #instrument_type="crypto","forex","fx-option","turbo-option","multi-option","cfd","digital-option"  
 instrument_type="digital-option"
