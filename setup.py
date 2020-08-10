@@ -3,7 +3,7 @@ from setuptools import (setup, find_packages)
 
 
 setup(
-    name="py-iqoption-api",
+    name="pyiqoptionapi",
     version="1.1.100",
     packages=find_packages(),
     install_requires=["pylint", "requests", "websocket-client==0.56"],
