@@ -1,5 +1,4 @@
-"""Module for IQ Option API."""
-
+# -*- coding: utf-8 -*-
 import json
 import logging
 import requests
@@ -58,7 +57,7 @@ from pyiqoptionapi.ws.objects.timesync import TimeSync
 from pyiqoptionapi.ws.objects.profile import Profile
 from pyiqoptionapi.ws.objects.candles import Candles
 from pyiqoptionapi.ws.objects.listinfodata import ListInfoData
-from pyiqoptionapi.ws.objects.betinfo import Game_betinfo_data
+from pyiqoptionapi.ws.objects.betinfo import GameBetInfoData
 
 from pyiqoptionapi.helpers.global_value import Globals
 import pyiqoptionapi.helpers.constants as OP_code
@@ -93,7 +92,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     profile = Profile()
     candles = Candles()
     listinfodata = ListInfoData()
-    game_betinfo = Game_betinfo_data()
+    game_betinfo = GameBetInfoData()
     global_value = Globals()
 
 

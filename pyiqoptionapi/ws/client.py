@@ -202,12 +202,9 @@ class WebsocketClient(object):
             with self.api.lock_strike_list:
                 self.api.strike_list = message
         elif message["name"] == "api_game_betinfo_result":
-            try:
-                with self.api.lock:
-                    self.api.game_betinfo.isSuccessful = message["msg"]["isSuccessful"]
-                    self.api.game_betinfo.dict = message["msg"]
-            except Exception as exception:
-                logging.error(exception)
+            self.api.game_betinfo.process_message(message["msg"])
+            #self.api.game_betinfo.isSuccessful = message["msg"]["isSuccessful"]
+            #self.api.game_betinfo.dict = message["msg"]
         elif message["name"]=="traders-mood-changed":
             with self.api.lock_mood:
                 self.api.traders_mood[message["msg"]["asset_id"]]=message["msg"]["value"]

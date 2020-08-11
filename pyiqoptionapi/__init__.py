@@ -222,11 +222,11 @@ class IQOption:
                     logging.error('**warning** get all option late 30 sec')
                     break
                 with self.api.lock_option_init_all_result:
-                    if self.api.api_option_init_all_result != None:
+                    if self.api.api_option_init_all_result:
                         break
                 time.sleep(.1)
             with self.api.lock_option_init_all_result:
-                if self.api.api_option_init_all_result["isSuccessful"] == True:
+                if self.api.api_option_init_all_result["isSuccessful"]:
                     return self.api.api_option_init_all_result
 
     def get_all_init_v2(self):
@@ -688,7 +688,10 @@ class IQOption:
     def check_win_v2(self, id_number, polling_time=5):
         while 1:
             check, data = self.get_betinfo(id_number)
-            win = data["result"]["data"][str(id_number)]["win"]
+            try:
+                win = data["result"]["data"][str(id_number)]["win"]
+            except:
+                pass
             if check and win != "":
                 try:
                     return data["result"]["data"][str(id_number)]["profit"] - data["result"]["data"][str(id_number)][
@@ -697,7 +700,7 @@ class IQOption:
                     pass
             time.sleep(polling_time)
 
-    async def check_win_v3(self, id_number):
+    def check_win_v3(self, id_number):
         while 1:
             if self.get_async_order(id_number)["option-closed"] != {}:
                 break
@@ -718,28 +721,27 @@ class IQOption:
     # -------------------get infomation only for binary option------------------------
 
     def get_betinfo(self, id_number):
-        # INPUT:int
-        while True:
+
+        while 1:
             self.api.game_betinfo.isSuccessful = None
-            start = time.time()
             try:
                 self.api.get_betinfo(id_number)
             except:
-                logging.error(
-                    '**error** def get_betinfo  self.iqoptionapi.get_betinfo reconnect')
+                logging.error( '**error** def get_betinfo  self.iqoptionapi.get_betinfo reconnect')
                 self.connect()
+            start = time.time()
             while self.api.game_betinfo.isSuccessful == None:
                 if time.time() - start > 10:
-                    logging.error(
-                        '**error** get_betinfo time out need reconnect')
-                    self.connect()
-                    self.api.get_betinfo(id_number)
-                    time.sleep(self.suspend * 10)
-            if self.api.game_betinfo.isSuccessful == True:
+                    time.sleep(5)
+                    break
+                time.sleep(1)
+
+            if self.api.game_betinfo.isSuccessful:
                 return self.api.game_betinfo.isSuccessful, self.api.game_betinfo.dict
             else:
                 return self.api.game_betinfo.isSuccessful, None
-            time.sleep(self.suspend * 10)
+
+
 
     def get_optioninfo(self, limit):
         with self.api.lock_api_game_getoptions:
@@ -866,16 +868,19 @@ class IQOption:
             time.sleep(.1)
 
     def sell_option(self, options_ids):
-        self.api.sell_option(options_ids)
         with self.api.lock_sold_options_respond:
             self.api.sold_options_respond = None
+        self.api.sell_option(options_ids)
+        time.sleep(.2)
+        start = time.time()
         while 1:
             with self.api.lock_sold_options_respond:
                 if self.api.sold_options_respond != None:
                     return self.api.sold_options_respond
+            if time.time()-start>5:
+                logging.error('sell option timeout')
+                return False
             time.sleep(.2)
-
-    # __________________for Digital___________________
 
     def get_digital_underlying_list_data(self):
         self.api.underlying_list_data = None
@@ -1132,11 +1137,10 @@ class IQOption:
                 if self.api.result != None:
                     return self.api.result
 
-    def check_win_digital(self, buy_order_id, polling_time):
+    def check_win_digital(self, buy_order_id, polling_time=1):
         while True:
-            time.sleep(polling_time)
             data = self.get_digital_position(buy_order_id)
-
+            time.sleep(polling_time)
             if data["msg"]["position"]["status"] == "closed":
                 if data["msg"]["position"]["close_reason"] == "default":
                     return data["msg"]["position"]["pnl_realized"]
