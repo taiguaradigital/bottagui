@@ -1,6 +1,5 @@
 # Py IQ Option extra oficial API
-
-https://travis-ci.com/deibsoncarvalho/py-iqoption-api.svg?branch=master
+[![Build Status](https://travis-ci.com/deibsoncarvalho/py-iqoption-api.svg?branch=master)](https://travis-ci.com/deibsoncarvalho/py-iqoption-api)
 
 ## Document
 
