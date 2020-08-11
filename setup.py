@@ -1,5 +1,6 @@
 """The python wrapper for IQ Option API package setup."""
-from setuptools import (setup, find_packages)
+from setuptools import find_packages
+from distutils.core import setup
 
 setup(
     name="py-iqoption-api",
