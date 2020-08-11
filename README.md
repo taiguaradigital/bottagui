@@ -1,11 +1,2 @@
 # Py IQ Option extra oficial API
-
-
-## Document
-
-### New document
-
-
- 
-### Old document
-
+[![Build Status](https://travis-ci.com/deibsoncarvalho/py-iqoption-api.svg?branch=master)](https://travis-ci.com/deibsoncarvalho/py-iqoption-api)
