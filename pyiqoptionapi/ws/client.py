@@ -173,14 +173,14 @@ class WebsocketClient(object):
             with self.api.lock_option_init_all_result:
                 self.api.api_option_init_all_result_v2 = message["msg"]
         elif message["name"] == "underlying-list":
-            with self.api.lock:
-                self.api.underlying_list_data=message["msg"]
+            with self.api.lock_underlying_list:
+                self.api.underlying_list_data = message["msg"]
         elif message["name"] == "instruments":
             with self.api.lock_instruments:
-                self.api.instruments=message["msg"]
+                self.api.instruments = message["msg"]
         elif message["name"] == "financial-information":
             with self.api.lock_financial_info:
-                self.api.financial_information=message
+                self.api.financial_information = message
         elif message["name"] == "position-changed":
             if message["microserviceName"] == "portfolio" and (message["msg"]["source"] == "digital-options") \
                     or message["msg"]["source"] == "trading":
@@ -205,12 +205,12 @@ class WebsocketClient(object):
             self.api.game_betinfo.process_message(message["msg"])
             #self.api.game_betinfo.isSuccessful = message["msg"]["isSuccessful"]
             #self.api.game_betinfo.dict = message["msg"]
-        elif message["name"]=="traders-mood-changed":
+        elif message["name"] == "traders-mood-changed":
             with self.api.lock_mood:
-                self.api.traders_mood[message["msg"]["asset_id"]]=message["msg"]["value"]
+                self.api.traders_mood[message["msg"]["asset_id"]] = message["msg"]["value"]
         #------for forex&cfd&crypto..
         elif message["name"] == "order-placed-temp":
-            with self.api.lock:
+            with self.api.lock_buy_order_id:
                 self.api.buy_order_id = message["msg"]["id"]
         elif message["name"] == "order":
             with self.api.lock_buy_order_id:

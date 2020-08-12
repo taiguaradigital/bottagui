@@ -61,6 +61,7 @@ from pyiqoptionapi.ws.objects.betinfo import GameBetInfoData
 
 from pyiqoptionapi.helpers.global_value import Globals
 import pyiqoptionapi.helpers.constants as OP_code
+from pyiqoptionapi.helpers.countries import Countries
 
 from collections import defaultdict
 
@@ -76,7 +77,7 @@ def nested_dict(n, type_dict):
 # InsecureRequestWarning: Unverified HTTPS request is being made.
 # Adding certificate verification is strongly advised.
 # See: https://urllib3.readthedocs.org/en/latest/security.html
-requests.packages.urllib3.disable_warnings()  # pylint: disable=no-member
+requests.packages.urllib3.disable_warnings()
 
 
 class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
@@ -305,6 +306,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         self.password = password
         self.proxies = proxies
         self.lock_actives = threading.RLock()
+        self.countries = Countries(self)
         # is used to determine if a buyOrder was set  or failed. If
         # it is None, there had been no buy order yet or just send.
         # If it is false, the last failed
@@ -351,7 +353,8 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         logger = logging.getLogger(__name__)
         url = self.prepare_http_url(resource)
         logger.debug(url)
-        response = self.session.request(method=method, url=url, data=data, params=params, headers=headers, proxies=self.proxies)
+        response = self.session.request(method=method, url=url, data=data, params=params, headers=headers,
+                                        proxies=self.proxies)
         logger.debug(response)
         logger.debug(response.text)
         logger.debug(response.headers)
@@ -372,7 +375,8 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         logger = logging.getLogger(__name__)
         logger.debug(method+": "+url+" headers: " + str(self.session.headers)+" cookies: " +
                      str(self.session.cookies.get_dict()))
-        response = self.session.request(method=method, url=url, data=data, params=params, headers=headers, proxies=self.proxies)
+        response = self.session.request(method=method, url=url, data=data, params=params, headers=headers,
+                                        proxies=self.proxies)
         logger.debug(response)
         logger.debug(response.text)
         logger.debug(response.headers)
@@ -388,17 +392,17 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         """
         return self.websocket_client.wss
 
-    def send_websocket_request(self, name, msg, request_id="",no_force_send=True):
+    def send_websocket_request(self, name, msg, request_id="", no_force_send=True):
         """Send websocket request to IQ Option server.
         :param str name: The websocket request name.
         :param dict msg: The websocket request msg.
         """
         logger = logging.getLogger(__name__)
         data = json.dumps(dict(name=name, msg=msg, request_id=request_id))
-        while (self.global_value.ssl_Mutual_exclusion or self.global_value.ssl_Mutual_exclusion_write) and no_force_send:
+        while (self.global_value.ssl_Mutual_exclusion or self.global_value.ssl_Mutual_exclusion_write) \
+                and no_force_send:
             pass
         self.global_value.ssl_Mutual_exclusion_write = True
-        #time.sleep(.2)
         self.websocket.send(data)
         logger.debug(data)
         self.global_value.ssl_Mutual_exclusion_write = False

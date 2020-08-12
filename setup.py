@@ -1,13 +1,15 @@
 """The python wrapper for IQ Option API package setup."""
 from setuptools import find_packages
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name="py-iqoption-api",
     version="1.1.100",
+    py_modules=['pyiqoptionapi'],
     packages=find_packages(),
     install_requires=["pylint", "requests", "websocket-client==0.56"],
     include_package_data=True,
+    license="MIT",
     description="Best IQ Option API for python",
     long_description="Best IQ Option API for python",
     url="https://github.com/deibsoncarvalho/py-iqoption-api",
@@ -16,5 +18,9 @@ setup(
     keywords=['IQ Option', 'IQOption', 'API IQ Option', 'IQOption API'],
     author_email="deibsoncarvalho@gmail.com",
     zip_safe=False,
-    classifiers=[],
-)
+    classifiers=(
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'License :: MIT',
+        'Programming Language :: Python :: 3.7')
+    )

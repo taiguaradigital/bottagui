@@ -38,6 +38,4 @@ class TestBinaryOption(unittest.TestCase):
         I_want_money.check_win_v3(id_put)
         I_want_money.get_binary_option_detail()
         I_want_money.get_all_profit()
-        # isSuccessful,dict=I_want_money.get_betinfo(id_put)
-        # self.assertTrue(isSuccessful)
         I_want_money.get_optioninfo(10)
