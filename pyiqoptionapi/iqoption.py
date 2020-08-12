@@ -144,17 +144,17 @@ class IQOption:
                     return self.api.financial_information
 
     def get_leader_board(self, country, from_position, to_position, near_traders_count, user_country_id=0,
-                               near_traders_country_count=0, top_country_count=0, top_count=0, top_type=2):
+                         near_traders_country_count=0, top_country_count=0, top_count=0, top_type=2):
         with self.api.lock_leaderbord_deals_client:
             self.api.leaderboard_deals_client = None
         country_id = self.api.countries.get_country_id(country) #Country.ID[country]
         self.api.Get_Leader_Board(country_id, user_country_id, from_position, to_position, near_traders_country_count,
                                   near_traders_count, top_country_count, top_count, top_type)
-        time.sleep(2)
+        time.sleep(.2)
         start = time.time()
         while 1:
             with self.api.lock_leaderbord_deals_client:
-                if self.api.leaderboard_deals_client != None:
+                if self.api.leaderboard_deals_client:
                     return self.api.leaderboard_deals_client
             if time.time() - start > 30:
                 raise TimeoutError
@@ -170,13 +170,13 @@ class IQOption:
             self.api.get_instruments(type)
             time.sleep(1)
             with self.api.lock_instruments:
-                if self.api.instruments != None:
+                if self.api.instruments:
                     return self.api.instruments
             if time.time() - start > 10:
                 raise TimeoutError
 
-    def _instruments_input_to_active(self, type):
-        instruments = self.get_instruments(type)
+    def _instruments_input_to_active(self, type_active):
+        instruments = self.get_instruments(type_active)
         for ins in instruments["instruments"]:
             self.actives[ins["id"]] = ins["active_id"]
 

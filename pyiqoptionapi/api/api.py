@@ -27,7 +27,7 @@ from pyiqoptionapi.ws.chanels.candles import GetCandles
 from pyiqoptionapi.ws.chanels.buyv2 import Buyv2
 from pyiqoptionapi.ws.chanels.buyv3 import *
 from pyiqoptionapi.ws.chanels.user import *
-from pyiqoptionapi.ws.chanels.api_game_betinfo import Game_betinfo
+from pyiqoptionapi.ws.chanels.api_game_betinfo import GameBetInfo
 from pyiqoptionapi.ws.chanels.instruments import Get_instruments
 from pyiqoptionapi.ws.chanels.get_financial_information import GetFinancialInformation
 from pyiqoptionapi.ws.chanels.strike_list import Strike_list
@@ -576,7 +576,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
 
     @property
     def subscribe_all_size(self):
-        return Subscribe_candles(self)
+        return SubscribeCandles(self)
 
     @property
     def unsubscribe(self):
@@ -720,7 +720,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
 
     @property
     def get_betinfo(self):
-        return Game_betinfo(self)
+        return GameBetInfo(self)
 
     @property
     def get_options(self):
