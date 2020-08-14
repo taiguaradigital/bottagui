@@ -1,4 +1,19 @@
-# -*- coding: utf-8 -*-
+"""
+    Copyright (C) 2019-2020 Deibson Carvalho (deibsoncarvalho)
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>
+"""
 from pyiqoptionapi.api.api import IQOptionAPI as _api
 import threading
 import time
@@ -8,6 +23,8 @@ from collections import defaultdict
 from collections import deque
 from datetime import datetime, timedelta
 from pyiqoptionapi.helpers import *
+from .version import VERSION
+from pyiqoptionapi.helpers.decorators import deprecated
 
 
 __all__ = ['IQOption']
@@ -22,7 +39,7 @@ def nested_dict(n, type_dict):
 
 class IQOption:
 
-    __version__ = "1.1.200"
+    __version__ = VERSION
     __status__ = "production"
 
     def __init__(self, email, password):
@@ -1512,20 +1529,100 @@ class IQOption:
     def opcode_to_name(self, opcode):
         return list(self.actives.keys())[list(self.actives.values()).index(opcode)]
 
-    # name:
-    # "live-deal-binary-option-placed"
-    # "live-deal-digital-option"
+    def get_active_id(self, active):
+        try:
+            return self.actives[active]
+        except KeyError:
+            logging.error('active {} is invalid'.format(active))
+            return None
+
+    def __subscribe_live_deal(self, name, actives, type_actives):
+        if type(actives) is list:
+            for active in actives:
+                active_id = self.get_active_id(active)
+                if not active_id:
+                    return False, 'active {} is invalid'.format(active)
+                self.api.Subscribe_Live_Deal(name, active_id, type_actives)
+                time.sleep(.2)
+            return True, None
+        else:
+            active_id = self.get_active_id(actives)
+            if not actives:
+                return False, 'active {} is invalid'.format(actives)
+            self.api.Subscribe_Live_Deal(name, active_id, type_actives)
+            return True, None
+
+    def subscribe_live_deal_binary(self, actives, turbo=True) -> tuple:
+        """
+        Function for subscribe live deals of options binary or turbo.
+        param actives:  active or list of actives names
+        param turbo: flag for option type turbo
+        return Tuple (True/False, reason or message error)
+        """
+
+        name = "live-deal-binary-option-placed"
+        type_active = "turbo" if turbo else "binary"
+        return self.__subscribe_live_deal(name, actives, type_active)
+
+    def subscribe_live_deal_digital(self, actives, expiration=1) -> tuple:
+        """
+        Function for subscribe live deals of options digital type.
+        param actives: (str) or (list) active name or list of actives names
+        expiration: (int) expiration time in 1, 5 or 15 minutes
+        return Tuple (True/False, reason or message error)
+        """
+        name = "live-deal-digital-option"
+        if expiration not in [1, 5, 15]:
+            raise ValueError('the expiration parameter value must be 1, 5 or 15.')
+        type_active = "PT{}M".format(expiration) #"PT1M"/"PT5M"/"PT15M"
+        return self.__subscribe_live_deal(name, actives, type_active)
+
+    @deprecated
     def subscribe_live_deal(self, name, active, _type, buffersize):
         active_id = self.actives[active]
         self.api.Subscribe_Live_Deal(name, active_id, _type)
-        """
-        self.iqoptionapi.live_deal_data[name][active][_type]=deque(list(),buffersize) 
 
-        while len(self.iqoptionapi.live_deal_data[name][active][_type])==0:
-            self.iqoptionapi.Subscribe_Live_Deal(name,active_id,_type)
-            time.sleep(1)
+    def unsubscribe_live_deal_binary(self, actives, turbo=True):
+        """
+        Function for unsubscribe live deals of options binary or turbo.
+        param actives:  active or list of actives names
+        param turbo: flag for option type turbo
+        return Tuple (True/False, reason or message error)
         """
 
+        name = "live-deal-binary-option-placed"
+        type_active = "turbo" if turbo else "binary"
+        return self.__unsubscribe_live_deal(name, actives, type_active)
+
+    def unsubscribe_live_deal_digital(self, actives, expiration=1):
+        """
+        Function for unsubscribe live deals of options digitals.
+        param actives:  (str) or (list) name of active or list of actives names
+        return (Tuple) (True/False, reason or message error)
+        """
+        name = "live-deal-binary-option-placed"
+        if expiration not in [1, 5, 15]:
+            raise ValueError('the expiration parameter value must be 1, 5 or 15.')
+        type_active = "PT{}M".format(expiration) #"PT1M"/"PT5M"/"PT15M"
+        return self.__unsubscribe_live_deal(name, actives, type_active)
+
+    def __unsubscribe_live_deal(self, name, actives, type_actives):
+        if type(actives) is list:
+            for active in actives:
+                active_id = self.get_active_id(active)
+                if not active_id:
+                    return False, 'active {} is invalid'.format(active)
+                self.api.Unscribe_Live_Deal(name, active_id, type_actives)
+                time.sleep(.2)
+            return True, None
+        else:
+            active_id = self.get_active_id(actives)
+            if not actives:
+                return False, 'active {} is invalid'.format(actives)
+            self.api.Unscribe_Live_Deal(name, active_id, type_actives)
+            return True, None
+
+    @deprecated
     def unscribe_live_deal(self, name, active, _type):
         active_id = self.actives[active]
         self.api.Unscribe_Live_Deal(name, active_id, _type)
@@ -1534,6 +1631,136 @@ class IQOption:
         with self.api.lock_live_deal_data:
             return self.api.live_deal_data[name][active][_type]
 
+    def get_live_deal_digital(self, active, buffer=0) -> deque:
+        """Function to return all registered trades for the specified active of digital type for the current session
+
+           Returns a deque containing a dict of live deals returned of IQ Option server
+
+           Args:
+               active: (string) name of active
+               buffer: (int) number of return deals for call
+
+           Returns:
+             A deque of dict with keys: 'amount_enrolled','avatar','country_id','created_at', 'expiration_type','flag',
+             'instrument_active_id','instrument_dir', 'instrument_expiration','is_big','name','position_id',
+             'user_id','brand_id'.
+
+           For example:
+
+              ({"amount_enrolled":6.0,"avatar":"","country_id":30,"created_at":1597413960301,
+                "expiration_type":"PT1M","flag":"BR","instrument_active_id":1,"instrument_dir":"put",
+                "instrument_expiration":1597414020000,"is_big":true,"name":"William O.","position_id":12004821753,
+                "user_id":76200274,"brand_id":1})
+
+           Raises:
+              KeyError: An error occurred accessing the dict of deals. Invalid active or not registered deals for
+             current session
+        """
+        return self.api.live_deal_data_digital.get_live_deals(active, buffer)
+
+    def get_live_deal_binary(self, active, turbo=True, buffer=0) -> deque:
+        """Function to return all registered trades for the specified asset for the current session
+
+           Returns a deque containing a dict of live deals returned of IQ Option server
+
+           Args:
+               active: (string) name of active
+               turbo: (bool) Is turbo or not (binary).
+               buffer: (int) number of return deals for call
+
+           Returns:
+               A deque of dict with keys: 'active_id', 'amount_enrolled', 'avatar', 'country_id',
+              'created_at', 'direction', 'expiration', 'flag', 'is_big', 'name', 'option_id', 'option_type',
+              'user_id', 'brand_id'.
+
+           For example:
+
+              ({'active_id': 1, 'amount_enrolled': 6.0, 'avatar': '', 'country_id': 205, 'created_at': 1597403952000,
+                'direction': 'call', 'expiration': 1597404000000, 'flag': 'AE', 'is_big': False,
+                'name': 'Obaid S. O. H. A.', 'option_id': 7190473575, 'option_type': 'turbo', 'user_id': 7262400,
+                'brand_id': 1},
+               {'active_id': 1, 'amount_enrolled': 35.0, 'avatar': '', 'country_id': 180,
+                'created_at': 1597403952000, 'direction': 'call', 'expiration': 1597404000000, 'flag': 'ZA',
+                'is_big': False, 'name': 'Ephraim G.', 'option_id': 7190473547, 'option_type': 'turbo',
+                'user_id': 12590610, 'brand_id': 1})
+
+              Raises:
+                 KeyError: An error occurred accessing the dict of deals. Invalid active or not registered deals for
+                 current session
+        """
+        if turbo:
+            return self.api.live_deal_data_turbo.get_live_deals(active, buffer)
+        return self.api.live_deal_data_binary.get_live_deals(active, buffer)
+
+    def get_all_deals_binary(self, active, turbo=True) -> list:
+        """Function to return all registered trades for the specified active of types binary or turbo for the
+        current session
+
+                Returns a list containing a dict with the registered trade data.
+
+                Args:
+                    active: (string) name of active.
+                    turbo: (bool) Is turbo or not (binary).
+
+                Returns:
+                    A list of dict with keys: 'active_id', 'amount_enrolled', 'avatar', 'country_id',
+                    'created_at', 'direction', 'expiration', 'flag', 'is_big', 'name', 'option_id', 'option_type',
+                    'user_id', 'brand_id'.
+
+                    For example:
+
+                    [{'active_id': 1, 'amount_enrolled': 6.0, 'avatar': '', 'country_id': 205, 'created_at': 1597403952000,
+                    'direction': 'call', 'expiration': 1597404000000, 'flag': 'AE', 'is_big': False,
+                    'name': 'Obaid S. O. H. A.', 'option_id': 7190473575, 'option_type': 'turbo', 'user_id': 7262400,
+                    'brand_id': 1},
+                    {'active_id': 1, 'amount_enrolled': 35.0, 'avatar': '', 'country_id': 180,
+                    'created_at': 1597403952000, 'direction': 'call', 'expiration': 1597404000000, 'flag': 'ZA',
+                    'is_big': False, 'name': 'Ephraim G.', 'option_id': 7190473547, 'option_type': 'turbo', 'user_id': 12590610,
+                    'brand_id': 1}]
+
+                Raises:
+                    KeyError: An error occurred accessing the dict of deals. Invalid active or not registed deals for
+                    current session
+                """
+        if turbo:
+            return self.api.live_deal_data_turbo.get_all_deals(active)
+        return self.api.live_deal_data_binary.get_all_deals(active)
+
+    def get_all_deals_digital(self, active, expiration=1) -> list:
+        """Function to return all registered trades for the specified active of type digital for the
+        current session
+
+                Returns a list containing a dict with the registered trade data.
+
+                Args:
+                    active: (string) name of active.
+                    expiration: (int) value of expiration instrument in 1, 5 or 15 minutes
+                Returns:
+                    A list of dict with keys: 'active_id', 'amount_enrolled', 'avatar', 'country_id',
+                    'created_at', 'direction', 'expiration', 'flag', 'is_big', 'name', 'option_id', 'option_type',
+                    'user_id', 'brand_id'.
+
+                    For example:
+
+                    [{"amount_enrolled":6.0,"avatar":"","country_id":30,"created_at":1597413960301,
+                "expiration_type":"PT1M","flag":"BR","instrument_active_id":1,"instrument_dir":"put",
+                "instrument_expiration":1597414020000,"is_big":true,"name":"William O.","position_id":12004821753,
+                "user_id":76200274,"brand_id":1}]
+
+                Raises:
+                    KeyError: An error occurred accessing the dict of deals. Invalid active or not registed deals for
+                    current session
+                    ValueError: parameter expiration invalid
+                """
+        if expiration not in [1, 5, 15]:
+            raise ValueError('the expiration parameter value must be 1, 5 or 15.')
+        try:
+            return [deal for deal in self.api.live_deal_data_digital.get_all_deals(active)
+                    if deal["expiration_type"] == "PT{}M".format(expiration)]
+        except KeyError:
+            return []
+
+    @deprecated
     def get_live_deal(self, name, active, _type):
         with self.api.lock_live_deal_data:
             return self.api.live_deal_data[name][active][_type]

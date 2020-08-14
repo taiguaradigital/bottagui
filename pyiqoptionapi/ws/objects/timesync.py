@@ -1,7 +1,7 @@
 """Module for IQ Option TimeSync websocket object."""
 import time
 import datetime
-from pyiqoptionapi.ws.objects.base import Base
+from .base import Base
 
 
 class TimeSync(Base):

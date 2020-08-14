@@ -1,24 +1,19 @@
 # Account
 
 ## get_balance()
+
+Function for return current balance in account selected
 ```python
-I_want_money.get_balance()
+iq_option_api.get_balance()
 ```
 
-## get_balance_v2()
-
-more accuracy
-
-```python
-I_want_money.get_balance_v2()
-```
 
 ## get_currency()
 
 you will check what currency you use
 
 ```python
-I_want_money.get_currency()
+iq_option_api.get_currency()
 ```
 
 ## reset_practice_balance()
@@ -26,32 +21,32 @@ I_want_money.get_currency()
 reset practice balance to $10000
 
 ```python
-from pyiqoptionapi.stable_api import IQOption
-I_want_money=IQOption("email","password")
-I_want_money.connect()#connect to iqoption
-print(I_want_money.reset_practice_balance())
+from pyiqoptionapi import IQOption
+iq_option_api=IQOption("email","password")
+iq_option_api.connect()#connect to iqoption
+print(iq_option_api.reset_practice_balance())
 ```
 
 ## Change real/practice Account
 
-MODE="PRACTICE"/"REAL"
+This API works with mode "PRACTICE" or "REAL"
 ```python
-I_want_money.change_balance(MODE)
+iq_option_api.change_balance("PRACTICE") 
                         #MODE: "PRACTICE"/"REAL"
 ```
 
-## get Other People stratagy
+## get Other People strategy
 
  
 ### sample
 ```python
-from pyiqoptionapi.stable_api import IQOption
+from pyiqoptionapi import IQOption
 import logging
 import time
  
 #logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(message)s')
-I_want_money=IQOption("email","password")
-I_want_money.connect()#connect to iqoption
+iq_option_api=IQOption("email","password")
+iq_option_api.connect()#connect to iqoption
 while_run_time=10
  
 #For digital option
@@ -61,14 +56,14 @@ active="EURUSD"
 _type="PT1M"#"PT1M"/"PT5M"/"PT15M"
 buffersize=10#
 print("_____________subscribe_live_deal_______________")
-I_want_money.subscribe_live_deal(name,active,_type,buffersize)
+iq_option_api.subscribe_live_deal(name,active,_type,buffersize)
 
  
 start_t=time.time()
 while True:
     #data size is below buffersize
     #data[0] is the last data
-    data=(I_want_money.get_live_deal(name,active,_type))
+    data=(iq_option_api.get_live_deal(name,active,_type))
     print("__For_digital_option__ data size:"+str(len(data)))
     print(data)
     print("\n\n")
@@ -76,7 +71,7 @@ while True:
     if time.time()-start_t>while_run_time:
         break
 print("_____________unscribe_live_deal_______________")
-I_want_money.unscribe_live_deal(name,active,_type)
+iq_option_api.unscribe_live_deal(name,active,_type)
 
 
 #For binary option
@@ -86,13 +81,13 @@ active="EURUSD"
 _type="turbo"#"turbo"/"binary"
 buffersize=10#
 print("_____________subscribe_live_deal_______________")
-I_want_money.subscribe_live_deal(name,active,_type,buffersize)
+iq_option_api.subscribe_live_deal(name,active,_type,buffersize)
 
 start_t=time.time()
 while True:
     #data size is below buffersize
     #data[0] is the last data
-    data=(I_want_money.get_live_deal(name,active,_type))
+    data=(iq_option_api.get_live_deal(name,active,_type))
     print("__For_binary_option__ data size:"+str(len(data)))
     print(data)
     print("\n\n")
@@ -100,7 +95,7 @@ while True:
     if time.time()-start_t>while_run_time:
         break
 print("_____________unscribe_live_deal_______________")
-I_want_money.unscribe_live_deal(name,active,_type)
+iq_option_api.unscribe_live_deal(name,active,_type)
 ```
 
 ### subscribe_live_deal
@@ -187,10 +182,4 @@ this api can get user detail
 
 ```python
 I_want_money.request_leaderboard_userinfo_deals_client(user_id,counutry_id)
-```
-
-### get_users_availability()
-
-```python
-I_want_money.get_users_availability(user_id)
 ```

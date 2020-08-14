@@ -297,31 +297,35 @@ class WebsocketClient(object):
         elif message["name"] == "training-balance-reset":
             with self.api.lock_training_balance_reset:
                 self.api.training_balance_reset_request=message["msg"]["isSuccessful"]
+
+        ########################################################################################################
+        # Processing Live Deals Data
+        ########################################################################################################
+
         elif message["name"] == "live-deal-binary-option-placed":
-            name=message["name"]
-            active_id=message["msg"]["active_id"]
-            actives = self.api.actives
-            active = list(actives.keys())[list(actives.values()).index(active_id)]
-            _type = message["msg"]["option_type"]
             try:
-                with self.api.lock_live_deal_data:
-                    self.api.live_deal_data[name][active][_type].appendleft(message["msg"])
-            except Exception as exception:
-                logging.error("live-deal-binary-option-placed: {}".format(exception))
+                type_active = message["msg"]["option_type"]
+                if type_active == "turbo":
+                    self.api.live_deal_data_turbo.set_live_deals(message["msg"])
+                else:
+                    self.api.live_deal_data_binary.set_live_deals(message["msg"])
+            except KeyError:
+                logging.error('live-deal-binary-option-placed -> key invalid -> {}'.format(message["msg"]))
         elif message["name"] == "live-deal-digital-option":
-            name = message["name"]
-            active_id = message["msg"]["instrument_active_id"]
-            actives = self.api.actives
-            active = list(actives.keys())[list(actives.values()).index(active_id)]
-            _type = message["msg"]["expiration_type"]
             try:
-                with self.api.lock_live_deal_data:
-                    self.api.live_deal_data[name][active][_type].appendleft(message["msg"])
-            except Exception as exception:
-                logging.error("live-deal-digital-option:{}".format(exception))
-        elif message["name"] == "leaderboard-deals-client":
-            with self.api.lock_leaderbord_deals_client:
-                self.api.leaderboard_deals_client = message["msg"]
+                self.api.live_deal_data_digital.set_live_deals(message["msg"])
+            except KeyError:
+                logging.error('live-deal-digital-option -> key invalid -> {}'.format(message["msg"]))
+            # name = message["name"]
+            # active_id = message["msg"]["instrument_active_id"]
+            # actives = self.api.actives
+            # active = list(actives.keys())[list(actives.values()).index(active_id)]
+            # _type = message["msg"]["expiration_type"]
+            # try:
+            #     with self.api.lock_live_deal_data:
+            #         self.api.live_deal_data[name][active][_type].appendleft(message["msg"])
+            # except Exception as exception:
+            #     logging.error("live-deal-digital-option:{}".format(exception))
         elif message["name"] == "live-deal":
             name = message["name"]
             active_id = message["msg"]["instrument_active_id"]
@@ -333,6 +337,10 @@ class WebsocketClient(object):
                     self.api.live_deal_data[name][active][_type].appendleft(message["msg"])
             except Exception as exception:
                 logging.error("live-deal: {}".format(exception))
+
+        elif message["name"] == "leaderboard-deals-client":
+            with self.api.lock_leaderbord_deals_client:
+                self.api.leaderboard_deals_client = message["msg"]
         elif message["name"] == "user-profile-client":
             with self.api.lock_user_profile_client:
                 self.api.user_profile_client = message["msg"]

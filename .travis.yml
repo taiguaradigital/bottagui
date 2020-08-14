@@ -11,4 +11,4 @@ install:
 script:
  - pytest --cov=./  --cov-report=xml tests/
 after_success:
- - codecov --file coverage.xml --token $CODECOV_TOKEN
+ - bash <(curl -s https://codecov.io/bash)

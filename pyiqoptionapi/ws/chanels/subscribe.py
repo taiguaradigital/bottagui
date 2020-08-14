@@ -44,7 +44,7 @@ class SubscribeCandles(BaseSubscribe):
         self.send_websocket_request(self.name, data)
 
 
-class Subscribe_Instrument_Quites_Generated(BaseSubscribe):
+class SubscribeInstrumentQuitesGenerated(BaseSubscribe):
 
     def __call__(self, active, expiration_period):
 
@@ -73,14 +73,14 @@ class Subscribe_Instrument_Quites_Generated(BaseSubscribe):
         return ans
 
 
-class Subscribe_top_assets_updated(BaseSubscribe):
+class SubscribeTopAssetsUpdated(BaseSubscribe):
 
     def __call__(self, instrument_type):
  
         data = {"name": "top-assets-updated",
                 "params": {
                            "routingFilters": {
-                                                "instrument_type":str(instrument_type)
+                                                "instrument_type": str(instrument_type)
 
                                              }
                           },
@@ -93,7 +93,9 @@ class Subscribe_top_assets_updated(BaseSubscribe):
 {"name":"subscribeMessage","request_id":"s_114","msg":{"name":"commission-changed","version":"1.0","params":{"routingFilters":{"instrument_type":"digital-option","user_group_id":1}}}}
 """
 #instrument_type: "binary-option"/"turbo-option"/"digital-option"/"crypto"/"forex"/"cfd"
-class Subscribe_commission_changed(BaseSubscribe):
+
+
+class SubscribeCommissionChanged(BaseSubscribe):
 
     def __call__(self, instrument_type):
  
@@ -109,7 +111,7 @@ class Subscribe_commission_changed(BaseSubscribe):
         self.send_websocket_request(self.name, data)
 
 
-class Subscribe_live_deal(BaseSubscribe):
+class SubscribeLiveDeal(BaseSubscribe):
 
     def __call__(self, name, active_id, _type):
          #"live-deal-binary-option-placed"
@@ -123,7 +125,6 @@ class Subscribe_live_deal(BaseSubscribe):
         elif name == "live-deal":
             _type_name = "instrument_type"
             _active_id = "instrument_active_id"
-
 
         data = {
                 "name": name,

@@ -1,58 +1,57 @@
 """Module for IQ option unsubscribe websocket chanel."""
-
 from pyiqoptionapi.ws.chanels.base import Base
 import datetime
 import pyiqoptionapi.helpers.constants as OP_code
-class Unsubscribe(Base):
-    """Class for IQ option candles websocket chanel."""
-    # pylint: disable=too-few-public-methods
+
+
+class BaseUnsubscribe(Base):
 
     name = "unsubscribeMessage"
 
-    def __call__(self, active_id,size=1):
+
+class Unsubscribe(BaseUnsubscribe):
+
+    def __call__(self, active_id, size=1):
       
-        data = {"name":"candle-generated",
-                "params":{
-                       "routingFilters":{
-                                        "active_id":str(active_id),
-                                        "size":int(size)
-                                        }
-                        }
+        data = {"name": "candle-generated",
+                "params": {
+                                "routingFilters": {
+                                                    "active_id": str(active_id),
+                                                    "size": int(size)
+                                                  }
+                          }
                 }
 
         self.send_websocket_request(self.name, data)
 
-class Unsubscribe_candles(Base):
-    """Class for IQ option candles websocket chanel."""
-    # pylint: disable=too-few-public-methods
 
-    name = "unsubscribeMessage"
+class UnsubscribeCandles(BaseUnsubscribe):
 
-    def __call__(self, active_id,size=1):
+    def __call__(self, active_id, size=1):
       
-        data = {"name":"candles-generated",
-                "params":{
-                       "routingFilters":{
-                                        "active_id":str(active_id)
-                                        }
-                        }
+        data = {"name": "candles-generated",
+                "params": {
+                            "routingFilters": {
+                                                "active_id": str(active_id)
+                                              }
+                          }
                 }
 
         self.send_websocket_request(self.name, data)
 
-class Unsubscribe_Instrument_Quites_Generated(Base):
-    name = "unsubscribeMessage"
-    
-    def __call__(self,ACTIVE,expiration_period):  
+
+class UnsubscribeInstrumentQuitesGenerated(BaseUnsubscribe):
+
+    def __call__(self, ACTIVE, expiration_period):
         data = {
             "name": "instrument-quotes-generated",
-            "params":{
-                "routingFilters":{
-                        "active":int(OP_code.ACTIVES[ACTIVE]),
-                        "expiration_period":int(expiration_period*60),
-                        "kind":"digital-option",
-                        },
-                },
+            "params": {
+                        "routingFilters": {
+                                            "active": int(OP_code.ACTIVES[ACTIVE]),
+                                            "expiration_period":int(expiration_period*60),
+                                            "kind":"digital-option",
+                                          },
+                     },
             "version": "1.0"
         }
         self.send_websocket_request(self.name, data)
@@ -66,27 +65,27 @@ class Unsubscribe_Instrument_Quites_Generated(Base):
         ans=ans+(duration-minute%duration)*60
         if exp>ans-10:
             ans=ans+(duration)*60
-            
         return ans
 
-class Unsubscribe_top_assets_updated(Base):
-    name = "unsubscribeMessage"
+
+class UnsubscribeTopAssetsUpdated(BaseUnsubscribe):
 
     def __call__(self, instrument_type):
  
-        data = {"name":"top-assets-updated",
-                "params":{
-                       "routingFilters":{
-                                        "instrument_type":str(instrument_type) 
+        data = {"name": "top-assets-updated",
+                "params": {
+                       "routingFilters": {
+                                        "instrument_type": str(instrument_type)
                                        
                                         }
                         },
-                "version":"1.2"
+                "version": "1.2"
                 }
         self.send_websocket_request(self.name, data)
 
-class Unsubscribe_commission_changed(Base):
-    name = "unsubscribeMessage"
+
+class UnsubscribeCommissionChanged(BaseUnsubscribe):
+
     def __call__(self, instrument_type):
  
         data = {"name":"commission-changed",
@@ -99,10 +98,10 @@ class Unsubscribe_commission_changed(Base):
                 }
         self.send_websocket_request(self.name, data)
 
-class Unscribe_live_deal(Base):
-    name = "unsubscribeMessage"
-    
-    def __call__(self,name,active_id,_type):
+
+class UnscribeLiveDeal(BaseUnsubscribe):
+
+    def __call__(self, name, active_id, _type):
         if name=="live-deal-binary-option-placed":
             _type_name="option_type"
             _active_id="active_id"

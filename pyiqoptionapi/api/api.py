@@ -17,12 +17,14 @@ from pyiqoptionapi.http.buyback import Buyback
 from pyiqoptionapi.http.changebalance import Changebalance
 from pyiqoptionapi.http.events import Events
 from pyiqoptionapi.ws.client import WebsocketClient
-from pyiqoptionapi.ws.chanels.get_balances import *
+from pyiqoptionapi.ws.chanels.get_balance import *
 
-from pyiqoptionapi.ws.chanels.ssid import Ssid
-from pyiqoptionapi.ws.chanels.subscribe import *
-from pyiqoptionapi.ws.chanels.unsubscribe import *
-from pyiqoptionapi.ws.chanels.setactives import SetActives
+# from pyiqoptionapi.ws.chanels.ssid import Ssid
+# from pyiqoptionapi.ws.chanels.subscribe import *
+# from pyiqoptionapi.ws.chanels.unsubscribe import *
+# from pyiqoptionapi.ws.chanels.setactives import SetActives
+from pyiqoptionapi.ws.chanels import *
+
 from pyiqoptionapi.ws.chanels.candles import GetCandles
 from pyiqoptionapi.ws.chanels.buyv2 import Buyv2
 from pyiqoptionapi.ws.chanels.buyv3 import *
@@ -58,6 +60,8 @@ from pyiqoptionapi.ws.objects.profile import Profile
 from pyiqoptionapi.ws.objects.candles import Candles
 from pyiqoptionapi.ws.objects.listinfodata import ListInfoData
 from pyiqoptionapi.ws.objects.betinfo import GameBetInfoData
+
+from pyiqoptionapi.ws.objects import *
 
 from pyiqoptionapi.helpers.global_value import Globals
 import pyiqoptionapi.helpers.constants as OP_code
@@ -206,6 +210,9 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
 
     ######################################################################
     live_deal_data = nested_dict(3, deque)
+    live_deal_data_binary = LiveDeals()
+    live_deal_data_turbo = LiveDeals()
+    live_deal_data_digital = LiveDeals()
     lock_live_deal_data = threading.RLock()
     ######################################################################
 
@@ -523,7 +530,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         :returns: The instance of :class:`Login
             <iqoptionapi.http.getprofile.Getprofile>`.
         """
-        return Get_Balances(self)
+        return GetBalance(self)
 
     @property
     def get_instruments(self):
@@ -545,11 +552,11 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
 # --------------------------------------------------------------------------------
     @property
     def Subscribe_Live_Deal(self):
-        return Subscribe_live_deal(self)
+        return SubscribeLiveDeal(self)
 
     @property
     def Unscribe_Live_Deal(self):
-        return Unscribe_live_deal(self)
+        return UnscribeLiveDeal(self)
 # --------------------------------------------------------------------------------
 # trader mood
 
@@ -589,7 +596,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
 
     @property
     def unsubscribe_all_size(self):
-        return Unsubscribe_candles(self)
+        return UnsubscribeCandles(self)
 
     def portfolio(self, Main_Name, name, instrument_type, user_balance_id="", limit=1, offset=0, request_id=""):
         #Main name:"unsubscribeMessage"/"subscribeMessage"/"sendMessage"(only for portfolio.get-positions")
@@ -667,19 +674,19 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     
     @property
     def Subscribe_Top_Assets_Updated(self):
-        return Subscribe_top_assets_updated(self)
+        return SubscribeTopAssetsUpdated(self)
 
     @property
     def Unsubscribe_Top_Assets_Updated(self):
-        return Unsubscribe_top_assets_updated(self)
+        return UnsubscribeTopAssetsUpdated(self)
 
     @property
     def Subscribe_Commission_Changed(self):
-        return Subscribe_commission_changed(self)
+        return SubscribeCommissionChanged(self)
 
     @property
     def Unsubscribe_Commission_Changed(self):
-        return Unsubscribe_commission_changed(self)
+        return UnsubscribeCommissionChanged(self)
         
 # --------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------
@@ -769,11 +776,11 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
 
     @property
     def subscribe_instrument_quites_generated(self):
-        return Subscribe_Instrument_Quites_Generated(self)
+        return SubscribeInstrumentQuitesGenerated(self)
 
     @property
     def unsubscribe_instrument_quites_generated(self):
-        return Unsubscribe_Instrument_Quites_Generated(self)
+        return UnsubscribeInstrumentQuitesGenerated(self)
 
     @property
     def place_digital_option(self):
