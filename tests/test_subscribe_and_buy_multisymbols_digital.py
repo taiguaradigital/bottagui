@@ -66,3 +66,4 @@ class TestMultiSymbolsDigital(unittest.TestCase):
             time.sleep(.2)
         for thread in threads:
             thread.join()
+        iq_api.close_connect()

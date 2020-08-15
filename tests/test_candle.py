@@ -14,19 +14,19 @@ password = "testerforapi2020"
 class TestCandle(unittest.TestCase):
   
     def test_Candle(self):
-        #login
-        I_want_money=IQOption(email, password)
-        I_want_money.connect()
-        I_want_money.change_balance("PRACTICE")
-        I_want_money.reset_practice_balance()
-        self.assertEqual(I_want_money.check_connect(), True)
-        ALL_Asset=I_want_money.get_all_open_time()
+        iq_api=IQOption(email, password)
+        iq_api.connect()
+        iq_api.change_balance("PRACTICE")
+        iq_api.reset_practice_balance()
+        self.assertEqual(iq_api.check_connect(), True)
+        ALL_Asset=iq_api.get_all_open_time()
         if ALL_Asset["turbo"]["EURUSD"]["open"]:
             ACTIVES="EURUSD"
         else:
             ACTIVES="EURUSD-OTC"
-        I_want_money.get_candles(ACTIVES, 60, 1000, time.time())
+        iq_api.get_candles(ACTIVES, 60, 1000, time.time())
         size="all"
-        I_want_money.start_candles_stream(ACTIVES, size,10)
-        I_want_money.get_realtime_candles(ACTIVES, size)
-        I_want_money.stop_candles_stream(ACTIVES, size)
+        iq_api.start_candles_stream(ACTIVES, size,10)
+        iq_api.get_realtime_candles(ACTIVES, size)
+        iq_api.stop_candles_stream(ACTIVES, size)
+        iq_api.close_connect()

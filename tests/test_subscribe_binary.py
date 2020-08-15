@@ -35,6 +35,7 @@ class TestSubscribeBinaryOption(unittest.TestCase):
         thb.start()
         tht.join()
         thb.join()
+        self.iq_api.close_connect()
         
     def turbo_option(self, active):
 

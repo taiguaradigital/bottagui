@@ -37,6 +37,14 @@ def nested_dict(n, type_dict):
         return defaultdict(lambda: nested_dict(n - 1, type_dict))
 
 
+class InstrumentExpiredError(Exception):
+    pass
+
+
+class InstrumentSuspendedError(Exception):
+    pass
+
+
 class IQOption:
 
     __version__ = VERSION
@@ -55,6 +63,7 @@ class IQOption:
         self.subscribe_mood = []
         # for digit
         self.get_digital_spot_profit_after_sale_data = nested_dict(2, int)
+        self._lock_strike_list = threading.RLock()
         self.get_realtime_strike_list_temp_data = {}
         self.get_realtime_strike_list_temp_expiration = 0
         self.SESSION_HEADER = {
@@ -125,6 +134,12 @@ class IQOption:
         else:
             return False, reason
 
+    def close_connect(self):
+        try:
+            self.api.close()
+        except:
+            pass
+
     def check_connect(self):
         return bool(self.api.global_value.check_websocket_if_connect)
 
@@ -132,14 +147,12 @@ class IQOption:
         return self.actives
 
     def update_actives(self):
-        # update from binary option
         self._get_all_binary_actives()
-        # crypto /forex/cfd
         self._instruments_input_all_in_actives()
         dicc = {}
         for lis in sorted(self.actives.items(), key=operator.itemgetter(1)):
             dicc[lis[0]] = lis[1]
-        self.actives(dicc)
+        self.actives = dicc
 
     def get_name_by_active_id(self, active_id):
         info = self.get_financial_information(active_id)
@@ -160,8 +173,151 @@ class IQOption:
                 if self.api.financial_information:
                     return self.api.financial_information
 
-    def get_leader_board(self, country, from_position, to_position, near_traders_count, user_country_id=0,
-                         near_traders_country_count=0, top_country_count=0, top_count=0, top_type=2):
+    def get_leader_board(self, *args, **kwargs):
+        """ Function to get strike list of turbo, binary and digital options
+
+
+           Args:
+               country: (string) name of country; default: 'Worldwide'.
+               from_position: (int) from position of trades of ranking; Default: 1
+               to_position: (int) to position of trades of ranking; Default: 100
+               near_traders_count: (int) number of trades near from trades ranking; Default: 0
+               user_country_id: (int) country id; Default: 0
+               near_traders_country_count: (int)
+               top_country_count: (int)
+               top_count: (int)
+               top_type: (int)
+           return:
+               A dict of data ranking
+
+           For example:
+
+                {'isSuccessful': True, 'result': {'user_id': 76757666, 'country_id': 0, 'top_type': 2,
+                'top_size': 306056, 'position': 306056, 'user_accounted_expiration_time': 0,
+                'top': {'306056': {'user_id': 76757666, 'user_name': 'Test T.', 'score': 0.0, 'count': 0, 'flag': 'BR'}},
+                'positional': {'1': {'user_id': 16853304, 'user_name': 'Landon J.', 'score': 166105.12, 'count': 378, 'flag': 'MX'},
+                '2': {'user_id': 70036986, 'user_name': 'Yuri G. D.', 'score': 164773.70594, 'count': 100, 'flag': 'GY'},
+                '3': {'user_id': 60673219, 'user_name': 'Miguel A. D. R. R.', 'score': 105171.71870499999,
+                'count': 1418, 'flag': 'PE'}, '4': {'user_id': 70528083, 'user_name': 'Emma J.',
+                'score': 104272.26503800003, 'count': 2977, 'flag': 'BR'}, '5': {'user_id': 37503537,
+                'user_name': 'Aaron T.', 'score': 95231.62824200002, 'count': 2707, 'flag': 'KR'},
+                '6': {'user_id': 22908162, 'user_name': 'Adrian C.', 'score': 91862.63630299999, 'count': 189, 'flag': 'TH'},
+                '7': {'user_id': 18021472, 'user_name': 'Riaan F.', 'score': 90754.83420999999, 'count': 5, 'flag': 'ZA'},
+                 '8': {'user_id': 75488497, 'user_name': 'Maria P.', 'score': 84165.703554, 'count': 71, 'flag': 'BR'},
+                 '9': {'user_id': 63822006, 'user_name': 'Landon J.', 'score': 83230.25161299997, 'count': 1376, 'flag': 'CN'},
+                 '10': {'user_id': 43124555, 'user_name': 'Nicola P.', 'score': 80801.75, 'count': 77, 'flag': 'CO'},
+                 '11': {'user_id': 74054648, 'user_name': 'Shaun M.', 'score': 74006.34222399982, 'count': 467, 'flag': 'BM'},
+                 '12': {'user_id': 67204771, 'user_name': 'Nguyen V. M.', 'score': 69622.63050099999, 'count': 204, 'flag': 'VN'},
+                 '13': {'user_id': 3089081, 'user_name': 'Oliver R.', 'score': 67531.43063400002, 'count': 984, 'flag': 'BR'},
+                 '14': {'user_id': 27546345, 'user_name': 'Ka L. K. I.', 'score': 64467.496652999995, 'count': 3788, 'flag': 'HK'},
+                 '15': {'user_id': 45844787, 'user_name': 'Ava C.', 'score': 63811.88065100003, 'count': 65, 'flag': 'TH'},
+                 '16': {'user_id': 76171561, 'user_name': 'Mateo K.', 'score': 60603.130252999996, 'count': 360, 'flag': 'BR'},
+                 '17': {'user_id': 12700851, 'user_name': 'Antonio M. M.', 'score': 58949.28062600001, 'count': 146, 'flag': 'ES'},
+                 '18': {'user_id': 13369320, 'user_name': 'Nelson K.', 'score': 58412.70622599999, 'count': 861, 'flag': 'BR'},
+                 '19': {'user_id': 74393123, 'user_name': 'Marcos S.', 'score': 57744.04904700001, 'count': 607, 'flag': 'BR'},
+                 '20': {'user_id': 13600742, 'user_name': 'shihabudeen s.', 'score': 55662.793837, 'count': 290, 'flag': 'SA'},
+                  '21': {'user_id': 61721151, 'user_name': 'João P. N. R. D. S.', 'score': 55325.68611900001,
+                  'count': 151, 'flag': 'BR'}, '22': {'user_id': 7201974, 'user_name': 'Jidveian O.',
+                   'score': 53778.303679999946, 'count': 3317, 'flag': 'RO'}, '23': {'user_id': 73061677,
+                   'user_name': 'Leonardo R.', 'score': 53540.43740300003, 'count': 411, 'flag': 'BR'},
+                   '24': {'user_id': 40646705, 'user_name': 'Mohamed R. A.', 'score': 52916.57938400003,
+                   'count': 856, 'flag': 'IN'}, '25': {'user_id': 18195609, 'user_name': 'Theewasit S.',
+                   'score': 51055.65773099999, 'count': 425, 'flag': 'TH'}, '26': {'user_id': 49982163,
+                   'user_name': 'Marlon C. D. S.', 'score': 50946.79124200001, 'count': 115, 'flag': 'BR'},
+                   '27': {'user_id': 61571520, 'user_name': 'Arifi E. F. M. J.', 'score': 50922.301971999994,
+                    'count': 118, 'flag': 'BR'}, '28': {'user_id': 58474778, 'user_name': 'Tse Y. L.',
+                    'score': 50900.173237, 'count': 65, 'flag': 'AR'}, '29': {'user_id': 49768259,
+                    'user_name': 'Jose W.', 'score': 50453.08858400001, 'count': 24, 'flag': 'GB'},
+                    '30': {'user_id': 11279531, 'user_name': 'Beng C. C.', 'score': 49738.0, 'count': 187, 'flag': 'MY'},
+                     '31': {'user_id': 76435817, 'user_name': 'saif a.', 'score': 49011.08086, 'count': 93, 'flag': 'IN'},
+                     '32': {'user_id': 44885579, 'user_name': 'Thomas J.', 'score': 46268.943177, 'count': 79, 'flag': 'CR'},
+                     '33': {'user_id': 32150521, 'user_name': 'Lincoln J.', 'score': 45951.23084899997, 'count': 406, 'flag': 'HK'},
+                     '34': {'user_id': 12695474, 'user_name': 'Chase G.', 'score': 45018.26216600001, 'count': 82, 'flag': 'ZM'},
+                      '35': {'user_id': 63648328, 'user_name': 'Hannah F.', 'score': 44705.45424699999, 'count': 619, 'flag': 'BR'},
+                       '36': {'user_id': 53399459, 'user_name': 'Jeerasak T.', 'score': 44288.245914, 'count': 467, 'flag': 'TH'},
+                       '37': {'user_id': 71996590, 'user_name': 'Yassar B. A. Z.', 'score': 43467.889462000014,
+                       'count': 504, 'flag': 'AE'}, '38': {'user_id': 56120476, 'user_name': 'Rodrigo C. d. S.',
+                       'score': 43206.89382299997, 'count': 137, 'flag': 'BR'}, '39': {'user_id': 76364737, 'user_name':
+                        'paulo r.', 'score': 42710.574925, 'count': 156, 'flag': 'BR'}, '40': {'user_id': 75939247,
+                        'user_name': 'Hannah A.', 'score': 42410.82707300001, 'count': 1479, 'flag': 'BR'},
+                        '41': {'user_id': 47147518, 'user_name': 'Jayden D.', 'score': 40648.8, 'count': 287, 'flag': 'MX'},
+                        '42': {'user_id': 71814235, 'user_name': 'Joshua G.', 'score': 39961.432432000016,
+                        'count': 206, 'flag': 'CN'}, '43': {'user_id': 33847032, 'user_name': 'Leah K.',
+                        'score': 39793.124370000005, 'count': 175, 'flag': 'BR'}, '44': {'user_id': 70832877,
+                        'user_name': 'Kevin T.', 'score': 37666.63259900001, 'count': 301, 'flag': 'IN'},
+                        '45': {'user_id': 49429309, 'user_name': 'Cameron S.', 'score': 37619.159774000014,
+                        'count': 2670, 'flag': 'TH'}, '46': {'user_id': 6822849, 'user_name': 'vinicius r.',
+                        'score': 37271.55617299999, 'count': 350, 'flag': 'BR'}, '47': {'user_id': 72578858,
+                        'user_name': 'Saleh S.', 'score': 37107.23492700003, 'count': 2063, 'flag': 'ID'},
+                        '48': {'user_id': 73026912, 'user_name': 'Isaac C.', 'score': 36003.986658999995,
+                        'count': 578, 'flag': 'MX'}, '49': {'user_id': 59909268, 'user_name': 'Mateo S.',
+                        'score': 35372.176673999995, 'count': 164, 'flag': 'BR'}, '50': {'user_id': 62702050,
+                        'user_name': 'Alexander L.', 'score': 34526.29163999999, 'count': 136, 'flag': 'TH'},
+                        '51': {'user_id': 67242757, 'user_name': 'Leah P.', 'score': 34360.789218000005,
+                        'count': 1934, 'flag': 'BR'}, '52': {'user_id': 54092835, 'user_name': 'Charles S.',
+                        'score': 34148.163529000005, 'count': 170, 'flag': 'IN'}, '53': {'user_id': 74384166,
+                        'user_name': 'Jonas Z. D.', 'score': 34101.926250000004, 'count': 438, 'flag': 'BR'},
+                        '54': {'user_id': 17150078, 'user_name': 'Никита .', 'score': 33458.48164500001,
+                        'count': 339, 'flag': 'UA'}, '55': {'user_id': 54139918, 'user_name': 'Ramilson S. L.',
+                        'score': 32816.86743600001, 'count': 814, 'flag': 'BR'}, '56': {'user_id': 62840974,
+                         'user_name': 'Samuel S.', 'score': 32790.060000000005, 'count': 93, 'flag': 'DO'},
+                         '57': {'user_id': 57751525, 'user_name': 'Hugo F. G. R.', 'score': 32469.93887,
+                         'count': 90, 'flag': 'CO'}, '58': {'user_id': 11886413, 'user_name': 'Benjamin T.',
+                         'score': 32266.259503999998, 'count': 2370, 'flag': 'FR'}, '59': {'user_id': 74956280, '
+                         user_name': 'Sebastian L.', 'score': 32078.978167, 'count': 604, 'flag': 'BR'},
+                         '60': {'user_id': 10038763, 'user_name': 'Nur S. B. M. T.', 'score': 31749.560001000038,
+                          'count': 229, 'flag': 'SG'}, '61': {'user_id': 15346838, 'user_name': 'Raffaello G. C.',
+                          'score': 31387.55332799999, 'count': 282, 'flag': 'LU'}, '62': {'user_id': 58487307,
+                          'user_name': 'Connor F.', 'score': 30697.899648, 'count': 56, 'flag': 'BR'},
+                          '63': {'user_id': 74703422, 'user_name': '용길 .', 'score': 30400.65881100001,
+                          'count': 277, 'flag': 'KR'}, '64': {'user_id': 63867622, 'user_name': 'Dominic W.',
+                           'score': 30126.892053999996, 'count': 32, 'flag': 'LA'}, '65': {'user_id': 69559258,
+                            'user_name': 'diego s. s.', 'score': 29616.703411000002, 'count': 95, 'flag': 'BR'},
+                            '66': {'user_id': 51435178, 'user_name': 'Samuel N.', 'score': 29230.680000000004,
+                            'count': 114, 'flag': 'NG'}, '67': {'user_id': 56235289, 'user_name': 'Muhammad M. A.',
+                             'score': 29220.588009999996, 'count': 60, 'flag': 'ID'}, '68': {'user_id': 76476054,
+                             'user_name': 'Thiago C. d. S.', 'score': 29067.45363400001, 'count': 759, 'flag': 'BR'},
+                             '69': {'user_id': 71241878, 'user_name': 'SILVIO L. D. S. J.', 'score': 28453.77092499998,
+                             'count': 166, 'flag': 'BR'}, '70': {'user_id': 76686383, 'user_name': 'Ju S. H.',
+                             'score': 28330.757488999996, 'count': 29, 'flag': 'KR'}, '71': {'user_id': 76610350,
+                             'user_name': 'Asher R.', 'score': 27851.778259999995, 'count': 897, 'flag': 'MK'},
+                             '72': {'user_id': 57697337, 'user_name': 'Austin W.', 'score': 27836.562275000008,
+                              'count': 57, 'flag': 'BR'}, '73': {'user_id': 53711757, 'user_name': 'Jonathan C.',
+                              'score': 27646.925839999985, 'count': 94, 'flag': 'BR'}, '74': {'user_id': 75513774, 'user_name': 'Leandro N. Z.', 'score': 27504.669713000018, 'count': 233, 'flag': 'BR'}, '75': {'user_id': 55098777, 'user_name': 'Juan S. L. H.', 'score': 27353.723391, 'count': 42, 'flag': 'CO'}, '76': {'user_id': 26156370, 'user_name': 'Renato P.', 'score': 27305.552034000004, 'count': 43, 'flag': 'BR'}, '77': {'user_id': 38003583, 'user_name': 'Connor J.', 'score': 26991.600000000002, 'count': 1985, 'flag': 'BR'}, '78': {'user_id': 13893128, 'user_name': 'Winai S.', 'score': 26664.688607000007, 'count': 369, 'flag': 'TH'}, '79': {'user_id': 55099058, 'user_name': 'Samuel C. K. D. O.', 'score': 26199.122514000017, 'count': 310, 'flag': 'BR'}, '80': {'user_id': 13372908, 'user_name': 'ayman j.', 'score': 26159.783749000002, 'count': 129, 'flag': 'EG'}, '81': {'user_id': 40606850, 'user_name': 'John H.', 'score': 26034.73452599999, 'count': 201, 'flag': 'MX'}, '82': {'user_id': 45447190, 'user_name': 'Jose A.', 'score': 25187.145059000002, 'count': 112, 'flag': 'TH'}, '83': {'user_id': 69864746, 'user_name': 'LAZARO L. E. S.', 'score': 25173.719999000004, 'count': 37, 'flag': 'BR'}, '84': {'user_id': 45408388, 'user_name': 'Claudio O. D. S. S.', 'score': 24832.376128999997, 'count': 323, 'flag': 'BR'}, '85': {'user_id': 30547186, 'user_name': 'Motsumi M.', 'score': 24620.290607000006, 'count': 407, 'flag': 'ZA'}, '86': {'user_id': 63352997, 'user_name': 'Alexandre S. F. D. M.', 'score': 24498.138975, 'count': 34, 'flag': 'BR'}, '87': {'user_id': 74817835, 'user_name': 'Elijah P.', 'score': 24059.392368, 'count': 51, 'flag': 'SG'}, '88': {'user_id': 51564329, 'user_name': 'Jason W.', 'score': 24045.545209999997, 'count': 18, 'flag': 'PK'}, '89': {'user_id': 24085141, 'user_name': 'NILSON S. D. S.', 'score': 23890.67496699999, 'count': 159, 'flag': 'BR'}, '90': {'user_id': 58364228, 'user_name': 'Nicolas F.', 'score': 23884.130227999998, 'count': 91, 'flag': 'CR'},
+                        '91': {'user_id': 16312131, 'user_name': 'Kenth-Olov S.', 'score': 23844.958760999987, 'count': 674, 'flag': 'SE'},
+                        '92': {'user_id': 59439734, 'user_name': 'Connor S.', 'score': 23625.363886000003, 'count': 133, 'flag': 'BR'},
+                        '93': {'user_id': 69930329, 'user_name': 'MAHASHOOK E.', 'score': 23570.006054000016, 'count': 163, 'flag': 'IN'},
+                        '94': {'user_id': 70938445, 'user_name': 'Carter A.', 'score': 23555.709998999984, 'count': 2590, 'flag': 'VE'},
+                        '95': {'user_id': 60183775, 'user_name': 'Kevin J.', 'score': 23343.413663999938, 'count': 1250, 'flag': 'SM'},
+                        '96': {'user_id': 43739819, 'user_name': 'Edidio S. R.', 'score': 23297.612573000006, 'count': 171, 'flag': 'BR'},
+                        '97': {'user_id': 63063830, 'user_name': 'sara p.', 'score': 23237.488849000005, 'count': 36, 'flag': 'BR'},
+                        '98': {'user_id': 47044590, 'user_name': 'Wilmar M.', 'score': 23079.158333000007, 'count': 853, 'flag': 'BR'},
+                        '99': {'user_id': 73369844, 'user_name': 'Oliver M.', 'score': 22862.551500000005, 'count': 199, 'flag': 'PK'},
+                        '100': {'user_id': 67658506, 'user_name': 'Rizki A.', 'score': 22757.042248000005, 'count': 84, 'flag': 'ID'}},
+                        'near_traders': {'306056': {'user_id': 76757666, 'user_name': 'Test T.', 'score': 0.0, 'count': 0, 'flag': 'BR'}},
+                        'top_countries': {'1': {'country_id': 30, 'name_short': 'BR', 'profit': 19284363.719301555},
+                        '2': {'country_id': 194, 'name_short': 'TH', 'profit': 1757536.3707300012},
+                        '3': {'country_id': 225, 'name_short': 'IN', 'profit': 1602008.2317870068},
+                        '4': {'country_id': 46, 'name_short': 'CO', 'profit': 1601114.0782900564},
+                         '5': {'country_id': 212, 'name_short': 'VN', 'profit': 913309.4867309995},
+                        '6': {'country_id': 128, 'name_short': 'MX', 'profit': 879294.2022480051},
+                        '7': {'country_id': 180, 'name_short': 'ZA', 'profit': 820781.2238850023},
+                         '8': {'country_id': 94, 'name_short': 'ID', 'profit': 689486.8343849988},
+                        '9': {'country_id': 156, 'name_short': 'PE', 'profit': 538571.1998770044},
+                    '10': {'country_id': 205, 'name_short': 'AE', 'profit': 528335.7821359993}}, 'score': 0.0}}
+           Raises:
+              ValueError: parameter expiration invalid
+        """
+        total_args = len(args)
+        country = kwargs.get('country', 'Worldwide' if not args[0] and total_args > 0 else args[0])
+        from_position = kwargs.get('from_position', 1 if not args[1] and total_args > 1 else args[1])
+        to_position = kwargs.get('to_position', 100 if not args[2] and total_args > 2 else args[2])
+        near_traders_count = kwargs.get('near_traders_count', args[3] if total_args > 3 else 0)
+        user_country_id = kwargs.get('user_country_id', args[4] if total_args > 4 else 0)
+        near_traders_country_count = kwargs.get('near_traders_country_count', args[5] if total_args > 5 else 0)
+        top_country_count = kwargs.get('top_country_count', args[6] if total_args > 6 else 0)
+        top_count = kwargs.get('top_count', args[7] if total_args > 7 else 0)
+        top_type = kwargs.get('top_type', args[8] if total_args > 8 else 2)
         with self.api.lock_leaderbord_deals_client:
             self.api.leaderboard_deals_client = None
         country_id = self.api.countries.get_country_id(country) #Country.ID[country]
@@ -173,7 +329,7 @@ class IQOption:
             with self.api.lock_leaderbord_deals_client:
                 if self.api.leaderboard_deals_client:
                     return self.api.leaderboard_deals_client
-            if time.time() - start > 30:
+            if time.time() - start > 60:
                 raise TimeoutError
             time.sleep(.2)
 
@@ -209,31 +365,21 @@ class IQOption:
                 self.actives[(init_info["result"][dirr]
                 ["actives"][i]["name"]).split(".")[1]] = int(i)
 
-    # _________________________self.iqoptionapi.get_api_option_init_all() wss______________________
     def get_all_init(self):
         while 1:
             with self.api.lock_option_init_all_result:
                 self.api.api_option_init_all_result = None
-            while 1:
-                try:
-                    self.api.get_api_option_init_all()
-                    break
-                except:
-                    logging.error('**error** get all option need reconnect')
-                    self.connect()
-                    time.sleep(5)
+            self.api.get_api_option_init_all()
+            time.sleep(1)
             start = time.time()
             while 1:
                 if time.time() - start > 30:
-                    logging.error('**warning** get all option late 30 sec')
-                    break
+                    raise TimeoutError('**warning** get all option v2 late 30 sec')
                 with self.api.lock_option_init_all_result:
                     if self.api.api_option_init_all_result:
-                        break
+                        if self.api.api_option_init_all_result["isSuccessful"]:
+                            return self.api.api_option_init_all_result
                 time.sleep(.1)
-            with self.api.lock_option_init_all_result:
-                if self.api.api_option_init_all_result["isSuccessful"]:
-                    return self.api.api_option_init_all_result
 
     def get_all_init_v2(self):
         with self.api.lock_option_init_all_result:
@@ -243,13 +389,11 @@ class IQOption:
         start_t = time.time()
         while 1:
             with self.api.lock_option_init_all_result:
-                if self.api.api_option_init_all_result_v2 != None:
+                if self.api.api_option_init_all_result_v2:
                     return self.api.api_option_init_all_result_v2
             if time.time() - start_t >= 30:
                 raise TimeoutError('**warning** get all option v2 late 30 sec')
             time.sleep(.1)
-
-    # ------- chek if binary/digit/cfd/stock... if open or not
 
     def get_all_open_time(self, *args, **kwargs):
 
@@ -297,8 +441,6 @@ class IQOption:
 
         return actives
 
-    # --------for binary option detail
-
     def get_binary_option_detail(self):
         detail = nested_dict(2, dict)
         init_info = self.get_all_init()
@@ -306,7 +448,6 @@ class IQOption:
             name = init_info["result"]["turbo"]["actives"][actives]["name"]
             name = name[name.index(".") + 1:len(name)]
             detail[name]["turbo"] = init_info["result"]["turbo"]["actives"][actives]
-
         for actives in init_info["result"]["binary"]["actives"]:
             name = init_info["result"]["binary"]["actives"][actives]["name"]
             name = name[name.index(".") + 1:len(name)]
@@ -323,7 +464,6 @@ class IQOption:
                                                 100.0 -
                                                 init_info["result"]["turbo"]["actives"][actives]["option"]["profit"][
                                                     "commission"]) / 100.0
-
         for actives in init_info["result"]["binary"]["actives"]:
             name = init_info["result"]["binary"]["actives"][actives]["name"]
             name = name[name.index(".") + 1:len(name)]
@@ -744,8 +884,6 @@ class IQOption:
             else:
                 return self.api.game_betinfo.isSuccessful, None
 
-
-
     def get_optioninfo(self, limit):
         with self.api.lock_api_game_getoptions:
             self.api.api_game_getoptions_result = None
@@ -878,9 +1016,9 @@ class IQOption:
         start = time.time()
         while 1:
             with self.api.lock_sold_options_respond:
-                if self.api.sold_options_respond != None:
+                if self.api.sold_options_respond:
                     return self.api.sold_options_respond
-            if time.time()-start>5:
+            if time.time()-start > 5:
                 logging.error('sell option timeout')
                 return False
             time.sleep(.2)
@@ -892,72 +1030,244 @@ class IQOption:
         time.sleep(.2)
         start_t = time.time()
         while 1:
+            if time.time() - start_t > 10:
+                raise TimeoutError('**warning** get all option v2 late 10 sec')
             with self.api.lock_underlying_list:
                 if self.api.underlying_list_data:
                     return self.api.underlying_list_data
-                time.sleep(.2)
-            if time.time() - start_t >= 10:
-                raise TimeoutError('**warning** get all option v2 late 10 sec')
+            time.sleep(.2)
+
+    def get_strike_list(self, active, duration) -> dict:
+        """ Function to get strike list of turbo, binary and digital options
 
 
-    def get_strike_list(self, ACTIVES, duration):
-        self.api.strike_list = None
-        self.api.get_strike_list(ACTIVES, duration)
+
+                    Args:
+                       active: (string) name of active.
+                       duration: (int) value of expiration instrument in 1, 5 or 15 minutes
+                    return:
+                        A dict with {price : {call : id, put: id}}
+
+                        For example:
+
+                        {'0.652290': {'call': 'doNZDUSD-OTC202008150223PT1MC065229',
+                        'put': 'doNZDUSD-OTC202008150223PT1MP065229'},
+                        '0.652310': {'call': 'doNZDUSD-OTC202008150223PT1MC065231',
+                        'put': 'doNZDUSD-OTC202008150223PT1MP065231'},
+                        '0.652330': {'call': 'doNZDUSD-OTC202008150223PT1MC065233',
+                        'put': 'doNZDUSD-OTC202008150223PT1MP065233'},
+                        '0.652350': {'call': 'doNZDUSD-OTC202008150223PT1MC065235',
+                        'put': 'doNZDUSD-OTC202008150223PT1MP065235'},
+                        '0.652370': {'call': 'doNZDUSD-OTC202008150223PT1MC065237',
+                        'put': 'doNZDUSD-OTC202008150223PT1MP065237'}}
+
+                    Raises:
+                       ValueError: parameter expiration invalid
+                """
+        if duration not in [1, 5, 15]:
+            raise ValueError('Value of duration period must be 1, 5 or 15')
+        with self.api.lock_strike_list:
+            self.api.strike_list = None
+        self.api.get_strike_list(active, duration)
+        time.sleep(.2)
         ans = {}
-        while self.api.strike_list == None:
-            pass
-        try:
-            for data in self.api.strike_list["msg"]["strike"]:
-                temp = {}
-                temp["call"] = data["call"]["id"]
-                temp["put"] = data["put"]["id"]
-                ans[("%.6f" % (float(data["value"]) * 10e-7))] = temp
-        except:
-            logging.error('**error** get_strike_list read problem...')
-            return self.api.strike_list, None
-        return self.api.strike_list, ans
+        start = time.time()
+        while 1:
+            if time.time() - start > 5:
+                raise TimeoutError('**warning** get strike list late 5 sec')
+            with self.api.lock_strike_list:
+                if self.api.strike_list:
+                    try:
+                        for data in self.api.strike_list["msg"]["strike"]:
+                            temp = {}
+                            temp["call"] = data["call"]["id"]
+                            temp["put"] = data["put"]["id"]
+                            ans[("%.6f" % (float(data["value"]) * 10e-7))] = temp
+                    except:
+                        logging.error('**error** get_strike_list read problem...')
+                        return self.api.strike_list, None
+                    return self.api.strike_list, ans
 
-    def subscribe_strike_list(self, ACTIVE, expiration_period):
+    def subscribe_strike_list(self, active, expiration_period):
+        """ Function to subscribe strike list of digital option
+
+            Args:
+               active: (string) name of active.
+               expiration_period: (int) value of expiration instrument in 1, 5 or 15 minutes
+            Raises:
+               ValueError: parameter expiration invalid
+        """
+        if expiration_period not in [1, 5, 15]:
+            raise ValueError('Value of duration period must be 1, 5 or 15')
         with self.api.lock_instrument_quote:
-            self.api.subscribe_instrument_quites_generated(ACTIVE, expiration_period)
+            self.api.subscribe_instrument_quites_generated(active, expiration_period)
 
-    def unsubscribe_strike_list(self, ACTIVE, expiration_period):
+    def unsubscribe_strike_list(self, active, expiration_period):
+        """ Function to subscribe strike list of digital option
+
+                    Args:
+                       active: (string) name of active.
+                       expiration_period: (int) value of expiration instrument in 1, 5 or 15 minutes
+                    Raises:
+                       ValueError: parameter expiration invalid
+        """
+        if expiration_period not in [1, 5, 15]:
+            raise ValueError('Value of duration period must be 1, 5 or 15')
         with self.api.lock_instrument_quote:
-            del self.api.instrument_quites_generated_data[ACTIVE]
-            self.api.unsubscribe_instrument_quites_generated(ACTIVE, expiration_period)
+            del self.api.instrument_quites_generated_data[active]
+            self.api.unsubscribe_instrument_quites_generated(active, expiration_period)
 
-    def get_instrument_quites_generated_data(self, ACTIVE, duration):
+    def get_instrument_quites_generated_data(self, active, duration) -> dict:
+        """ Function to get data for quites of digital options
+
+            Args:
+               active: (string) name of active.
+               duration: (int) value of expiration instrument in 1, 5 or 15 minutes
+           return:
+               A dict with quites generated data
+
+
+               For example:
+
+               {'active': 76, 'expiration': {'instant': '2020-08-15T02:38:00Z', 'period': 60,
+                'timestamp': 1597459080000}, 'instant': '2020-08-15T02:37:03Z', 'kind': 'digital-option',
+                'quotes': [{'price': {'ask': 42.065502, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP11839']},
+  b             {'price': {'ask': 46.133311, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP11841']},
+                {'price': {'ask': 53.449076, 'bid': 48.649076}, 'symbols': ['doEURUSD-OTC202008150238PT1MCSPT']},
+                {'price': {'ask': 42.091824, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118438']},
+                {'price': {'ask': 38.261337, 'bid': 24.31197}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118416']},
+                {'price': {'ask': 44.894468, 'bid': 38.484254}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118421']},
+                {'price': {'ask': 37.01829, 'bid': 23.020743}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118423']},
+                {'price': {'ask': None, 'bid': 79.058811}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118412']},
+                {'price': {'ask': 60.172535, 'bid': 51.782535}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118419']},
+                {'price': {'ask': 50.373892, 'bid': 45.622162}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118419']},
+                {'price': {'ask': 50.074479, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118427']},
+                {'price': {'ask': None, 'bid': 71.747036}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118414']},
+                {'price': {'ask': 42.124695, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118402']},
+                {'price': {'ask': 60.285932, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118424']},
+                {'price': {'ask': 41.332193, 'bid': 27.586487}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118422']},
+                {'price': {'ask': 42.271942, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118404']},
+                {'price': {'ask': 42.16473, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118436']},
+                {'price': {'ask': 42.065501, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC11845']},
+                {'price': {'ask': 92.243673, 'bid': 63.633673}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118423']},
+                {'price': {'ask': 68.70834, 'bid': 46.21834}, 'symbols': ['doEURUSD-OTC202008150238PT1MP11842']},
+                {'price': {'ask': 46.469082, 'bid': 39.9197}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118418']},
+                {'price': {'ask': 42.065722, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118444']},
+                {'price': {'ask': 76.265642, 'bid': 50.365642}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118418']},
+                {'price': {'ask': 42.071623, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC11844']},
+                {'price': {'ask': 84.592669, 'bid': 58.692669}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118422']},
+                        {'price': {'ask': 42.065516, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118392']},
+                        {'price': {'ask': 48.793738, 'bid': 44.156415}, 'symbols': ['doEURUSD-OTC202008150238PT1MC11842']},
+                        {'price': {'ask': 43.772954, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118408']},
+                        {'price': {'ask': 47.629317, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118428']},
+                        {'price': {'ask': 77.70037, 'bid': 51.80037}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118421']},
+                        {'price': {'ask': None, 'bid': 72.626214}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118425']},
+                        {'price': {'ask': 97.798283, 'bid': 69.188283}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118424']},
+                        {'price': {'ask': 42.0655, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118454',
+                        'doEURUSD-OTC202008150238PT1MC118452', 'doEURUSD-OTC202008150238PT1MC118456']}, {'price':
+                        {'ask': 42.065505, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118448']},
+                        {'price': {'ask': 42.068783, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118398']},
+                        {'price': {'ask': 42.393921, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118434']},
+                        {'price': {'ask': 55.401547, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118425']},
+                        {'price': {'ask': 56.308859, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118414']},
+                        {'price': {'ask': 51.38202, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118426']},
+                        {'price': {'ask': 42.066133, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118396']},
+                        {'price': {'ask': 42.066747, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118442']},
+                        {'price': {'ask': 44.518596, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC11843']},
+                        {'price': {'ask': 42.065607, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118394']},
+                        {'price': {'ask': 42.698198, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118406']},
+                        {'price': {'ask': None, 'bid': 80.0},
+                        'symbols': ['doEURUSD-OTC202008150238PT1MP11845',
+                                    'doEURUSD-OTC202008150238PT1MP118444', 'doEURUSD-OTC202008150238PT1MC11841',
+                                    'doEURUSD-OTC202008150238PT1MC118408', 'doEURUSD-OTC202008150238PT1MP118428',
+                                    'doEURUSD-OTC202008150238PT1MP118454', 'doEURUSD-OTC202008150238PT1MP118436',
+                                    'doEURUSD-OTC202008150238PT1MC118404', 'doEURUSD-OTC202008150238PT1MP118432',
+                                    'doEURUSD-OTC202008150238PT1MC11839', 'doEURUSD-OTC202008150238PT1MC118394',
+                                    'doEURUSD-OTC202008150238PT1MC118398', 'doEURUSD-OTC202008150238PT1MP118442',
+                                    'doEURUSD-OTC202008150238PT1MP118438', 'doEURUSD-OTC202008150238PT1MP118446',
+                                    'doEURUSD-OTC202008150238PT1MC118402', 'doEURUSD-OTC202008150238PT1MC118396',
+                                    'doEURUSD-OTC202008150238PT1MP11843', 'doEURUSD-OTC202008150238PT1MP118448',
+                                    'doEURUSD-OTC202008150238PT1MC118406', 'doEURUSD-OTC202008150238PT1MP118434',
+                                    'doEURUSD-OTC202008150238PT1MP11844', 'doEURUSD-OTC202008150238PT1MP118456',
+                                    'doEURUSD-OTC202008150238PT1MC1184', 'doEURUSD-OTC202008150238PT1MC118392',
+                                    'doEURUSD-OTC202008150238PT1MP118452']},
+                        {'price': {'ask': 42.080392, 'bid': 1.0},
+                        'symbols': ['doEURUSD-OTC202008150238PT1MP1184']}, {'price': {'ask': 42.065535, 'bid': 1.0},
+                        'symbols': ['doEURUSD-OTC202008150238PT1MC118446']}, {'price': {'ask': None, 'bid': 79.616736},
+                        'symbols': ['doEURUSD-OTC202008150238PT1MP118427']}, {'price': {'ask': 91.03917, 'bid': 62.42917},
+                        'symbols': ['doEURUSD-OTC202008150238PT1MC118416']}, {'price': {'ask': 43.021529, 'bid': 1.0},
+                        'symbols': ['doEURUSD-OTC202008150238PT1MC118432']}, {'price': {'ask': 53.450924, 'bid': 48.650924},
+                        'symbols': ['doEURUSD-OTC202008150238PT1MPSPT']}, {'price': {'ask': None, 'bid': 76.521105},
+                        'symbols': ['doEURUSD-OTC202008150238PT1MP118426']}, {'price': {'ask': 50.648584, 'bid': 1.0},
+                        'symbols': ['doEURUSD-OTC202008150238PT1MP118412']}],
+                        'timestamp': 1597459023000, 'underlying': 'EURUSD-OTC'}
+
+                    Raises:
+                       ValueError: parameter expiration invalid
+                """
         start = time.time()
         while 1:
             with self.api.lock_instrument_quote:
-                if self.api.instrument_quotes_generated_raw_data[ACTIVE][duration * 60] != {}:
-                    return self.api.instrument_quotes_generated_raw_data[ACTIVE][duration * 60]
+                if self.api.instrument_quotes_generated_raw_data[active][duration * 60] != {}:
+                    return self.api.instrument_quotes_generated_raw_data[active][duration * 60]['msg']
             if time.time() - start > 10:
                 raise TimeoutError
             time.sleep(.1)
 
-    def get_realtime_strike_list(self, ACTIVE, duration):
+    def get_realtime_strike_list(self, active, duration) -> dict:
+        """ Function to get strike list of digital options
+
+            Before call this function, need subscribe strike list with function 'subscribe_strike_list'.
+            Finish the use of this function, must be unsubscribe with function 'unsubscribe_strike_list'.
+
+            Args:
+               active: (string) name of active.
+               duration: (int) value of expiration instrument in 1, 5 or 15 minutes
+            return:
+                A dict with {price : {call : {profit, id}, put : {profit, id}}}
+                strikes call / put, profit and id of instrument
+
+                For example:
+
+                {'1.184060':
+                {'call': {'profit': None, 'id': 'doEURUSD-OTC202008150153PT1MC118406'},
+                 'put': {'profit': 137.72450107570336, 'id': 'doEURUSD-OTC202008150153PT1MP118406'}},
+                 '1.184090':
+                 {'call': {'profit': None, 'id': 'doEURUSD-OTC202008150153PT1MC118409'},
+                  'put': {'profit': 137.72450107570336, 'id': 'doEURUSD-OTC202008150153PT1MP118409'}},
+                  '1.184120':
+                  {'call': {'profit': None, 'id': 'doEURUSD-OTC202008150153PT1MC118412'},
+                  'put': {'profit': 137.72450107570336, 'id': 'doEURUSD-OTC202008150153PT1MP118412'}}}
+
+            Raises:
+               ValueError: parameter expiration invalid
+        """
+        if duration not in [1, 5, 15]:
+            raise ValueError('Value of duration period must be 1, 5 or 15')
+        start_t = time.time()
         while 1:
+            if time.time()-start_t > 10:
+                msg = 'the instrument ' + active + ' has suspended'
+                raise InstrumentSuspendedError(msg)
             with self.api.lock_instrument_quote:
-                if self.api.instrument_quites_generated_data[ACTIVE][duration * 60]:
+                if self.api.instrument_quites_generated_data[active][duration * 60]:
                     break
             time.sleep(.1)
-        """
-        strike_list dict: price:{call:id,put:id}
-        """
         ans = {}
         with self.api.lock_instrument_quote:
-            now_timestamp = self.api.instrument_quites_generated_timestamp[ACTIVE][duration * 60]
+            now_timestamp = self.api.instrument_quites_generated_timestamp[active][duration * 60]
 
         while ans == {}:
-            if self.get_realtime_strike_list_temp_data == {} or now_timestamp != self.get_realtime_strike_list_temp_expiration:
-                raw_data, strike_list = self.get_strike_list(ACTIVE, duration)
-                self.get_realtime_strike_list_temp_expiration = raw_data["msg"]["expiration"]
-                self.get_realtime_strike_list_temp_data = strike_list
-            else:
-                strike_list = self.get_realtime_strike_list_temp_data
+            with self._lock_strike_list:
+                if self.get_realtime_strike_list_temp_data == {} \
+                        or now_timestamp != self.get_realtime_strike_list_temp_expiration:
+                    raw_data, strike_list = self.get_strike_list(active, duration)
+                    self.get_realtime_strike_list_temp_expiration = raw_data["msg"]["expiration"]
+                    self.get_realtime_strike_list_temp_data = strike_list
+                else:
+                    strike_list = self.get_realtime_strike_list_temp_data
             with self.api.lock_instrument_quote:
-                profit = self.api.instrument_quites_generated_data[ACTIVE][duration * 60]
+                profit = self.api.instrument_quites_generated_data[active][duration * 60]
             for price_key in strike_list:
                 try:
                     side_data = {}
@@ -968,7 +1278,7 @@ class IQOption:
                         detail_data["id"] = strike_list[price_key][side_key]
                         side_data[side_key] = detail_data
                     ans[price_key] = side_data
-                except:
+                except KeyError:
                     pass
         return ans
 

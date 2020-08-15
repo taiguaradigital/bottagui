@@ -32,7 +32,7 @@ from pyiqoptionapi.ws.chanels.user import *
 from pyiqoptionapi.ws.chanels.api_game_betinfo import GameBetInfo
 from pyiqoptionapi.ws.chanels.instruments import Get_instruments
 from pyiqoptionapi.ws.chanels.get_financial_information import GetFinancialInformation
-from pyiqoptionapi.ws.chanels.strike_list import Strike_list
+from pyiqoptionapi.ws.chanels.strike_list import StrikeList
 from pyiqoptionapi.ws.chanels.leaderboard import Leader_Board
 
 from pyiqoptionapi.ws.chanels.traders_mood import Traders_mood_subscribe
@@ -104,6 +104,8 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     #####################################################################
     api_option_init_all_result = []
     api_option_init_all_result_v2 = []
+    instrument_data_binary = []
+    instrument_data_turbo = []
     lock_option_init_all_result = threading.RLock()
     #####################################################################
 
@@ -717,12 +719,9 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         self.send_websocket_request(name="api_option_init_all", msg="")
 
     def get_api_option_init_all_v2(self):
-     
-        msg={"name": "get-initialization-data",
-                                    "version": "3.0",
-                                    "body": {}
-                                    }
+        msg = {"name": "get-initialization-data", "version": "3.0", "body": {}}
         self.send_websocket_request(name="sendMessage", msg=msg)
+
 # -------------get information-------------
 
     @property
@@ -772,7 +771,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
 
     @property
     def get_strike_list(self):
-        return Strike_list(self)
+        return StrikeList(self)
 
     @property
     def subscribe_instrument_quites_generated(self):
@@ -958,11 +957,8 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         return True, None
 
     def close(self):
-        try:
-            self.websocket.close()
-            self.websocket_thread.join(1)
-        except Exception as exception:
-            logging.error('close-conection-socket: {}'.format(exception))
+        self.websocket.close()
+        self.websocket_thread.join(1)
 
     def websocket_alive(self):
         return self.websocket_thread.is_alive()

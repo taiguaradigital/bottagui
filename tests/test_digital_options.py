@@ -39,8 +39,9 @@ class TestDigitalOption(unittest.TestCase):
         iq_api.get_digital_position(id_put)
         iq_api.check_win_digital(id_put)
         iq_api.subscribe_strike_list(actives, expirations_mode)
-        data= False
+        data=False
         while not data:
             data = iq_api.get_digital_current_profit(actives, expirations_mode)
             time.sleep(1)
         iq_api.unsubscribe_strike_list(actives, expirations_mode)
+        iq_api.close_connect()

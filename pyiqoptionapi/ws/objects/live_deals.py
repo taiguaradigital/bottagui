@@ -127,7 +127,7 @@ class LiveDeals(Base):
                 Raises:
                     KeyError: An error occurred accessing the dict of deals. Invalid active or not registed deals for
                     current session
-                """
+        """
         response = deque()
         try:
             total = len(self._queue_live_deals[active])

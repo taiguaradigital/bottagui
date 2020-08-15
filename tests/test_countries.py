@@ -20,3 +20,4 @@ class TestCountries(unittest.TestCase):
         self.assertTrue(type(country.get_top_countries()) is dict)
         self.assertTrue(type(country.get_countries_names()) is list)
         self.assertTrue(type(country.get_country_id('Worldwide')) is int)
+        iq_api.close_connect()

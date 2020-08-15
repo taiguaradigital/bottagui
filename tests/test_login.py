@@ -11,8 +11,9 @@ password = "testerforapi2020"
 class TestLogin(unittest.TestCase):
   
     def test_login(self):
-        I_want_money=IQOption(email,password)
-        I_want_money.connect()
-        I_want_money.change_balance("PRACTICE")
-        I_want_money.reset_practice_balance()
-        self.assertEqual(I_want_money.check_connect(), True)
+        iq_api=IQOption(email, password)
+        iq_api.connect()
+        iq_api.change_balance("PRACTICE")
+        iq_api.reset_practice_balance()
+        self.assertEqual(iq_api.check_connect(), True)
+        iq_api.close_connect()

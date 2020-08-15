@@ -18,5 +18,7 @@ class TestUsers(unittest.TestCase):
         self.assertEqual(iq_api.check_connect(), True)
         users = iq_api.get_leader_board('Worldwide', 1, 1, 0)
         iq_api.get_users_availability(30)
-        self.assertTrue(type(iq_api.request_leaderboard_userinfo_deals_client(users['result']['positional']['1']['user_id'], users['result']['positional']['1']['flag'])) is dict)
+        self.assertTrue(type(iq_api.request_leaderboard_userinfo_deals_client(users['result']['positional']['1']['user_id'],
+                                                                              users['result']['positional']['1']['flag'])) is dict)
         self.assertTrue(type(iq_api.get_user_profile_client(users['result']['positional']['1']['user_id'])) is dict)
+        iq_api.close_connect()

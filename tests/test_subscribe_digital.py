@@ -37,3 +37,4 @@ class TestSubscribeDigitalOption(unittest.TestCase):
                 break
         print("_____________unsubscribe_live_deal digital_______________")
         iq_api.subscribe_live_deal_digital(active)
+        iq_api.close_connect()

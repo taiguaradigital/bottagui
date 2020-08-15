@@ -38,3 +38,4 @@ class TestBinaryOption(unittest.TestCase):
         iq_api.get_binary_option_detail()
         iq_api.get_all_profit()
         iq_api.get_optioninfo(10)
+        iq_api.close_connect()

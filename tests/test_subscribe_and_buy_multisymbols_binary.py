@@ -41,6 +41,7 @@ class TestMultiSymbolsBinary(unittest.TestCase):
         self.assertEqual(tot_all, total)
         print('list of all deals ( {} )-> {}'.format(tot_all, all_deals))
 
+
     def test_binary_option(self):
         iq_api = IQOption(email, password)
         iq_api.connect()
@@ -66,3 +67,4 @@ class TestMultiSymbolsBinary(unittest.TestCase):
             time.sleep(.2)
         for thread in threads:
             thread.join()
+        iq_api.close_connect()
