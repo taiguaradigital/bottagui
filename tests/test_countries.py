@@ -17,7 +17,6 @@ class TestCountries(unittest.TestCase):
         iq_api.connect()
         iq_api.change_balance("PRACTICE")
         country = Countries(iq_api)
-        self.assertTrue(type(country.get_top_countries()) is dict)
         self.assertTrue(type(country.get_countries_names()) is list)
         self.assertTrue(type(country.get_country_id('Worldwide')) is int)
         iq_api.close_connect()

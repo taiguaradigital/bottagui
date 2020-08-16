@@ -33,7 +33,7 @@ from pyiqoptionapi.ws.chanels.api_game_betinfo import GameBetInfo
 from pyiqoptionapi.ws.chanels.instruments import Get_instruments
 from pyiqoptionapi.ws.chanels.get_financial_information import GetFinancialInformation
 from pyiqoptionapi.ws.chanels.strike_list import StrikeList
-from pyiqoptionapi.ws.chanels.leaderboard import Leader_Board
+from pyiqoptionapi.ws.chanels.leaderboard import LeaderBoard
 
 from pyiqoptionapi.ws.chanels.traders_mood import Traders_mood_subscribe
 from pyiqoptionapi.ws.chanels.traders_mood import Traders_mood_unsubscribe
@@ -66,17 +66,11 @@ from pyiqoptionapi.ws.objects import *
 from pyiqoptionapi.helpers.global_value import Globals
 import pyiqoptionapi.helpers.constants as OP_code
 from pyiqoptionapi.helpers.countries import Countries
+from pyiqoptionapi.helpers.utils import nested_dict
 
 from collections import defaultdict
 
 import threading
-
-
-def nested_dict(n, type_dict):
-    if n == 1:
-        return defaultdict(type_dict)
-    else:
-        return defaultdict(lambda: nested_dict(n-1, type_dict))
 
 # InsecureRequestWarning: Unverified HTTPS request is being made.
 # Adding certificate verification is strongly advised.
@@ -88,7 +82,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     """Class for communication with IQ Option API."""
     
     ######################################################################
-    socket_option_opened={}
+    socket_option_opened = {}
     lock_socket_option_opened = threading.RLock()
     ######################################################################
 
@@ -704,7 +698,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     
     @property
     def Get_Leader_Board(self):
-        return Leader_Board(self)
+        return LeaderBoard(self)
     
     @property
     def getcandles(self):
@@ -871,7 +865,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
                                                                          "ca_certs": "cacert.pem"
                                                                         }
                                                             }
-                                                     )  # for fix pyinstall error: cafile, capath and cadata cannot be all omitted
+                                                     )
             self.websocket_thread.daemon = True
             self.websocket_thread.start()
         except Exception as exception:

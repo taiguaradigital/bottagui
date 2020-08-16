@@ -3,7 +3,7 @@ ACTIVES = {'EURUSD': 1, 'EURGBP': 2, 'GBPJPY': 3, 'EURJPY': 4, 'GBPUSD': 5, 'USD
            'USDRUB': 10, 'AMAZON': 31, 'APPLE': 32, 'BAIDU': 33, 'CISCO': 34, 'FACEBOOK': 35, 'GOOGLE': 36, 'INTEL': 37,
            'MSFT': 38, 'YAHOO': 40, 'AIG': 41, 'CITI': 45, 'COKE': 46, 'GE': 48, 'GM': 49, 'GS': 50, 'JPM': 51, 'MCDON': 52,
            'MORSTAN': 53, 'NIKE': 54, 'USDCHF': 72, 'XAUUSD': 74, 'XAGUSD': 75, 'EURUSD-OTC': 76, 'EURGBP-OTC': 77,
-           'USDCHF-OTC': 78,
+           'USDCHF-OTC': 78, 'GBPJPY-OTC': 84,
            'EURJPY-OTC': 79, 'NZDUSD-OTC': 80, 'GBPUSD-OTC': 81, 'USDJPY-OTC': 85, 'AUDCAD-OTC': 86, 'ALIBABA': 87,
            'YANDEX': 95, 'AUDUSD': 99,
            'USDCAD': 100, 'AUDJPY': 101, 'GBPCAD': 102, 'GBPCHF': 103, 'GBPAUD': 104, 'EURCAD': 105, 'CHFJPY': 106,

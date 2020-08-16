@@ -207,7 +207,11 @@ class Countries(object):
     def get_countries_names(self):
         with self._lock:
             return list([v['name'] for v in self._countries.values()])
-
+    
+    def get_country_name(self, name_short):
+        with self._lock:
+            return self._countries.get(name_short).get('name')
+        
     def get_top_countries(self, country='Worldwide'):
          """
          return dict {country_id, name_short, profit}

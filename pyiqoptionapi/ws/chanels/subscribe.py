@@ -80,8 +80,7 @@ class SubscribeTopAssetsUpdated(BaseSubscribe):
         data = {"name": "top-assets-updated",
                 "params": {
                            "routingFilters": {
-                                                "instrument_type": str(instrument_type)
-
+                                                "instrument_type": instrument_type
                                              }
                           },
                 "version": "1.2"
@@ -103,8 +102,9 @@ class SubscribeCommissionChanged(BaseSubscribe):
                 "name": "commission-changed",
                 "params": {
                             "routingFilters": {
-                                                "instrument_type": str(instrument_type)
-                                              }
+                                                "instrument_type": str(instrument_type),
+
+                                               }
                           },
                 "version": "1.0"
                 }

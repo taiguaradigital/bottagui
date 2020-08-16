@@ -41,7 +41,7 @@ from pyiqoptionapi.ws.chanels.api_game_betinfo import GameBetInfo
 from pyiqoptionapi.ws.chanels.instruments import Get_instruments
 from pyiqoptionapi.ws.chanels.get_financial_information import GetFinancialInformation
 from pyiqoptionapi.ws.chanels.strike_list import StrikeList
-from pyiqoptionapi.ws.chanels.leaderboard import Leader_Board
+from pyiqoptionapi.ws.chanels.leaderboard import LeaderBoard
 
 from pyiqoptionapi.ws.chanels.traders_mood import Traders_mood_subscribe
 from pyiqoptionapi.ws.chanels.traders_mood import Traders_mood_unsubscribe

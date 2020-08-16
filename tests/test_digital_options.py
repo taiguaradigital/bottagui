@@ -38,10 +38,43 @@ class TestDigitalOption(unittest.TestCase):
         asyncio.run(iq_api.check_win_digital_v3(id_put))
         iq_api.get_digital_position(id_put)
         iq_api.check_win_digital(id_put)
-        iq_api.subscribe_strike_list(actives, expirations_mode)
-        data=False
-        while not data:
-            data = iq_api.get_digital_current_profit(actives, expirations_mode)
-            time.sleep(1)
-        iq_api.unsubscribe_strike_list(actives, expirations_mode)
+        limit = 5
+        duration = 1
+        count = 0
+        for active in all_assets['digital']:
+            if not all_assets['digital'][active]['open']:
+                continue
+            if count == limit:
+                break
+            try:
+                strikes = iq_api.get_strike_list(active, duration)[1]
+                print('Strikes for {} ( {} ) -> {}'.format(active, "digital", strikes))
+            except IndexError:
+                continue
+            else:
+                for strike in strikes:
+                    print(' -> {} -> {}'.format(strike, strikes[strike]))
+            finally:
+                count += 1
+                time.sleep(.2)
+        count = 0
+
+        time.sleep(1)
+        type_asset = 'digital'
+        for active in all_assets[type_asset]:
+            if all_assets[type_asset][active]['open']:
+                iq_api.subscribe_strike_list(active, duration)
+                time.sleep(.2)
+                current_profit = iq_api.get_digital_current_profit(active, duration)
+                print('current profit for {} ( {} ) -> {}'.format(active, type_asset, current_profit))
+                time.sleep(.2)
+                strikes = iq_api.get_realtime_strike_list(active, duration)
+                print('Strikes {} digital -> {}'.format(active, strikes))
+                for strike in strikes:
+                    print(' -> {} -> {}'.format(strike, strikes[strike]))
+                iq_api.unsubscribe_strike_list(active, duration)
+                time.sleep(1)
+                quites = iq_api.get_instrument_quites_generated_data(active, duration)
+                print('quites for {} ( {} ) -> {}'.format(active, type_asset, quites))
+                break
         iq_api.close_connect()

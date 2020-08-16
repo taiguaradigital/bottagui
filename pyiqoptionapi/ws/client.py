@@ -88,7 +88,7 @@ class WebsocketClient(object):
             active_id = message["msg"]["active_id"]
             Active_name = list(actives.keys())[list(actives.values()).index(active_id)]
             commission = message["msg"]["commission"]["value"]
-            with self.api.lock_live_deal_data:
+            with self.api.lock_subscribe_commission:
                 self.api.subscribe_commission_changed_data[instrument_type][Active_name][self.api.timesync.server_timestamp] = int(commission)
             
         #######################################################
@@ -196,7 +196,7 @@ class WebsocketClient(object):
             with self.api.lock_position_change:
                 self.api.order_async[int(message["msg"]["option_id"])][message["name"]] = message
         elif message["name"] == "top-assets-updated":
-            with self.api.lock_auto_margin_call_changed:
+            with self.api.lock_top_assets_updated:
                 self.api.top_assets_updated_data[str(message["msg"]["instrument_type"])] = message["msg"]["data"]
         elif message["name"] == "strike-list":
             with self.api.lock_strike_list:
@@ -248,25 +248,28 @@ class WebsocketClient(object):
         elif message["name"]=="sold-options":
             with self.api.lock_sold_options_respond:
                 self.api.sold_options_respond=message
-        elif message["name"]=="tpsl-changed":
+        elif message["name"] == "tpsl-changed":
             with self.api.lock_tpsl_changed_respond:
                 self.api.tpsl_changed_respond=message
-        elif message["name"]=="position-changed":
+        elif message["name"] == "position-changed":
             with self.api.lock_position_change:
                 self.api.position_changed=message
-        elif message["name"]=="auto-margin-call-changed":
+        elif message["name"] == "auto-margin-call-changed":
             with self.api.lock_auto_margin_call_changed:
                 self.api.auto_margin_call_changed_respond=message
-        elif message["name"]=="digital-option-placed":
+        elif message["name"] == "digital-option-placed":
             try:
                 with self.api.lock_digital_option_placed_id:
-                    self.api.digital_option_placed_id=message["msg"]["id"]
+                    self.api.digital_option_placed_id = message["msg"]["id"]
             except:
                 with self.api.lock_digital_option_placed_id:
-                    self.api.digital_option_placed_id=message["msg"]
-        elif message["name"]=="result":
+                    self.api.digital_option_placed_id = message["msg"]
+        elif message["name"] == "result":
             with self.api.lock_buy_multi:
-                self.api.result=message["msg"]["success"]
+                self.api.result = message["msg"]["success"]
+        elif message['name'] == "expiration-list-changed":
+            print(message['name']['msg'])
+            pass
         elif message["name"] == "instrument-quotes-generated":
             actives = self.api.actives
             Active_name = list(actives.keys())[list(actives.values()).index(message["msg"]["active"])]
@@ -279,7 +282,7 @@ class WebsocketClient(object):
                     ProfitPercent = None
                 else:
                     askPrice = (float)(data["price"]["ask"])
-                    ProfitPercent = ((100-askPrice)*100)/askPrice
+                    ProfitPercent = ((100 - askPrice) * 100) / askPrice
                 
                 for symble in data["symbols"]:
                     try:

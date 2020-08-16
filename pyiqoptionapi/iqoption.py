@@ -21,28 +21,17 @@ import logging
 import operator
 from collections import defaultdict
 from collections import deque
+from itertools import chain
 from datetime import datetime, timedelta
 from pyiqoptionapi.helpers import *
 from .version import VERSION
 from pyiqoptionapi.helpers.decorators import deprecated
+from pyiqoptionapi.helpers.exceptions import *
+from pyiqoptionapi.helpers.utils import nested_dict
+import math
 
 
 __all__ = ['IQOption']
-
-
-def nested_dict(n, type_dict):
-    if n == 1:
-        return defaultdict(type_dict)
-    else:
-        return defaultdict(lambda: nested_dict(n - 1, type_dict))
-
-
-class InstrumentExpiredError(Exception):
-    pass
-
-
-class InstrumentSuspendedError(Exception):
-    pass
 
 
 class IQOption:
@@ -51,8 +40,12 @@ class IQOption:
     __status__ = "production"
 
     def __init__(self, email, password):
-        self.size = [1, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800,
-                     3600, 7200, 14400, 28800, 43200, 86400, 604800, 2592000]
+
+        self.__size = [1, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800,
+                       3600, 7200, 14400, 28800, 43200, 86400, 604800, 2592000]
+        self.__durations = [1, 5, 15]
+        self.__lock_dur = threading.RLock()
+        self.__lock_size = threading.RLock()
         self.email = email
         self.password = password
         self.suspend = 0.5
@@ -67,9 +60,20 @@ class IQOption:
         self.get_realtime_strike_list_temp_data = {}
         self.get_realtime_strike_list_temp_expiration = 0
         self.SESSION_HEADER = {
-            "User-Agent": r"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36"}
+            "User-Agent": r"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36"}
+            #"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36"}
         self.SESSION_COOKIE = {}
         self.api = None
+
+    @property
+    def size(self):
+        with self.__lock_size:
+            return self.__size
+
+    @property
+    def durations(self):
+        with self.__lock_dur:
+            return self.__durations
 
     @property
     def actives(self):
@@ -173,16 +177,15 @@ class IQOption:
                 if self.api.financial_information:
                     return self.api.financial_information
 
-    def get_leader_board(self, *args, **kwargs):
+    def get_leader_board(self, *args, **kwargs) -> dict:
         """ Function to get strike list of turbo, binary and digital options
 
-
-           Args:
+           Args / kwargs:
                country: (string) name of country; default: 'Worldwide'.
                from_position: (int) from position of trades of ranking; Default: 1
                to_position: (int) to position of trades of ranking; Default: 100
-               near_traders_count: (int) number of trades near from trades ranking; Default: 0
-               user_country_id: (int) country id; Default: 0
+               near_traders_count: (int) number of trades near from ranking of current balance (account) logged; Default: 0
+               user_country: (int) country id; Default: 0
                near_traders_country_count: (int)
                top_country_count: (int)
                top_count: (int)
@@ -192,7 +195,7 @@ class IQOption:
 
            For example:
 
-                {'isSuccessful': True, 'result': {'user_id': 76757666, 'country_id': 0, 'top_type': 2,
+                {'user_id': 76757666, 'country_id': 0, 'top_type': 2,
                 'top_size': 306056, 'position': 306056, 'user_accounted_expiration_time': 0,
                 'top': {'306056': {'user_id': 76757666, 'user_name': 'Test T.', 'score': 0.0, 'count': 0, 'flag': 'BR'}},
                 'positional': {'1': {'user_id': 16853304, 'user_name': 'Landon J.', 'score': 166105.12, 'count': 378, 'flag': 'MX'},
@@ -306,21 +309,26 @@ class IQOption:
                         '9': {'country_id': 156, 'name_short': 'PE', 'profit': 538571.1998770044},
                     '10': {'country_id': 205, 'name_short': 'AE', 'profit': 528335.7821359993}}, 'score': 0.0}}
            Raises:
-              ValueError: parameter expiration invalid
+              ValueError: Invalid params country or user_country
+              TimeoutError: wait response of server late 60 seconds
         """
         total_args = len(args)
-        country = kwargs.get('country', 'Worldwide' if not args[0] and total_args > 0 else args[0])
-        from_position = kwargs.get('from_position', 1 if not args[1] and total_args > 1 else args[1])
-        to_position = kwargs.get('to_position', 100 if not args[2] and total_args > 2 else args[2])
+        country = kwargs.get('country', args[0] if total_args > 0 else 'Worldwide')
+        from_position = kwargs.get('from_position', args[1] if total_args > 1 else 1)
+        to_position = kwargs.get('to_position', args[2] if total_args > 2 else 1)
         near_traders_count = kwargs.get('near_traders_count', args[3] if total_args > 3 else 0)
-        user_country_id = kwargs.get('user_country_id', args[4] if total_args > 4 else 0)
+        user_country_id = kwargs.get('user_country', args[4] if total_args > 4 else 0)
         near_traders_country_count = kwargs.get('near_traders_country_count', args[5] if total_args > 5 else 0)
         top_country_count = kwargs.get('top_country_count', args[6] if total_args > 6 else 0)
         top_count = kwargs.get('top_count', args[7] if total_args > 7 else 0)
         top_type = kwargs.get('top_type', args[8] if total_args > 8 else 2)
         with self.api.lock_leaderbord_deals_client:
             self.api.leaderboard_deals_client = None
-        country_id = self.api.countries.get_country_id(country) #Country.ID[country]
+
+        country_id = self.api.countries.get_country_id(country)
+        user_country_id = self.api.countries.get_country_id(user_country_id)
+        if country_id is None:
+            raise ValueError('the country name is invalid.')
         self.api.Get_Leader_Board(country_id, user_country_id, from_position, to_position, near_traders_country_count,
                                   near_traders_count, top_country_count, top_count, top_type)
         time.sleep(.2)
@@ -328,10 +336,92 @@ class IQOption:
         while 1:
             with self.api.lock_leaderbord_deals_client:
                 if self.api.leaderboard_deals_client:
-                    return self.api.leaderboard_deals_client
+                    if self.api.leaderboard_deals_client['isSuccessful']:
+                        return self.api.leaderboard_deals_client['result']
+                    else:
+                        logging.error('get-leaderboard-deals failed')
+                        return {}
             if time.time() - start > 60:
-                raise TimeoutError
+                raise TimeoutError('wait response of iq option server late 60 seconds.')
             time.sleep(.2)
+
+    def get_top_ten_countries(self) -> dict:
+        """ Function to get top ten countries
+
+           return:
+               A dict of data ranking top ten countries: { ranking : { country name :, profit : }}
+
+           For example:
+
+                {'1': {'country_name': 'Brazil', 'profit': 20283306.309515793},
+                '2': {'country_name': 'Thailand', 'profit': 1921195.1081850065},
+                '3': {'country_name': 'India', 'profit': 1763547.6178790075},
+                '4': {'country_name': 'Colombia', 'profit': 1654171.8981970623},
+                '5': {'country_name': 'Vietnam', 'profit': 984552.785571},
+                '6': {'country_name': 'Mexico', 'profit': 908087.9020600046},
+                '7': {'country_name': 'South Africa', 'profit': 876138.8213250051},
+                '8': {'country_name': 'Indonesia', 'profit': 755503.205712998},
+                '9': {'country_name': 'United Arab Emirates', 'profit': 599085.4182369991},
+                '10': {'country_name': 'Peru', 'profit': 555931.6867790035}}
+           Raises:
+              TimeoutError: wait response of server late 60 seconds
+        """
+        try:
+            response = defaultdict(dict)
+            countries = self.get_leader_board()['top_countries']
+            for ranking in countries:
+                response[ranking] = {"country_name": self.api.countries.get_country_name(countries[ranking]['name_short']),
+                                     "profit": countries[ranking]['profit']}
+            return response
+        except KeyError:
+            logging.error('error getting top ten countries ranking')
+            return {}
+        except (TimeoutError, ValueError) as e:
+            logging.error(e)
+            return {}
+
+    def get_positional_ranking_traders(self, country='Worldwide', from_position=1, to_position=100) -> dict:
+        """ Function to get top ten countries
+
+         return:
+           A dict of ranking traders
+
+           Raises:
+             ValueError: Invalid params from_position or to_position
+             TimeoutError: wait response of server late 60 seconds
+        """
+        try:
+            if from_position > to_position:
+                raise ValueError('the from_position value cannot be greater than the to_position value.')
+            if to_position > 10000:
+                data = []
+                step = 10000
+                loop = math.ceil(to_position / step)
+                from_ = from_position
+                to_ = step
+                for _ in range(loop):
+                    data.append(self.get_leader_board(country=country, from_position=from_,
+                                                      to_position=to_)['positional'])
+                    from_ += step
+                    to_ += step
+                    if to_ > to_position:
+                        to_ = to_position
+                    time.sleep(.2)
+                response = defaultdict(dict)
+                for item in data:
+                    for k, v in item.items():
+                        response[k] = v
+                return response
+            else:
+                return self.get_leader_board(country=country, from_position=from_position,
+                                             to_position=to_position)['positional']
+        except KeyError:
+            logging.error('error getting positional ranking {} from {} to {}'.format(country,
+                                                                                     from_position, to_position))
+            return {}
+        except (TimeoutError, ValueError) as e:
+            logging.error(e)
+            return {}
 
     def get_instruments(self, type):
         # type="crypto"/"forex"/"cfd"
@@ -395,49 +485,59 @@ class IQOption:
                 raise TimeoutError('**warning** get all option v2 late 30 sec')
             time.sleep(.1)
 
-    def get_all_open_time(self, *args, **kwargs):
+    def get_all_open_time(self, types=('digital', 'binary', 'turbo', 'cfd', 'forex', 'crypto')) -> defaultdict:
 
-        # for binary option turbo and binary
         actives = nested_dict(3, dict)
-        binary_data = self.get_all_init_v2()
-        binary_list = ["binary", "turbo"]
-        for option in binary_list:
-            for actives_id in binary_data[option]["actives"]:
-                active = binary_data[option]["actives"][actives_id]
-                name = str(active["name"]).split(".")[1]
-                if active["enabled"] == True:
-                    if active["is_suspended"] == True:
-                        actives[option][name]["open"] = False
+
+        if 'binary' in types or 'turbo' in types:
+            # for binary option turbo and binary
+            binary_data = self.get_all_init_v2()
+            binary_list = ["binary", "turbo"]
+            for option in binary_list:
+                for actives_id in binary_data[option]["actives"]:
+                    active = binary_data[option]["actives"][actives_id]
+                    name = str(active["name"]).split(".")[1]
+                    if active["enabled"] == True:
+                        if active["is_suspended"] == True:
+                            actives[option][name]["open"] = False
+                        else:
+                            actives[option][name]["open"] = True
                     else:
-                        actives[option][name]["open"] = True
-                else:
-                    actives[option][name]["open"] = active["enabled"]
+                        actives[option][name]["open"] = active["enabled"]
 
-        # for digital
-        digital_data = self.get_digital_underlying_list_data()["underlying"]
-        for digital in digital_data:
-            name = digital["underlying"]
-            schedule = digital["schedule"]
-            actives["digital"][name]["open"] = False
-            for schedule_time in schedule:
-                start = schedule_time["open"]
-                end = schedule_time["close"]
-                if start < time.time() < end:
-                    actives["digital"][name]["open"] = True
-
-        # for OTHER
-        instrument_list = ["cfd", "forex", "crypto"]
-        for instruments_type in instrument_list:
-            ins_data = self.get_instruments(instruments_type)["instruments"]
-            for detail in ins_data:
-                name = detail["name"]
-                schedule = detail["schedule"]
-                actives[instruments_type][name]["open"] = False
+        if 'digital' in types:
+            # for digital
+            digital_data = self.get_digital_underlying_list_data()["underlying"]
+            for digital in digital_data:
+                name = digital["underlying"]
+                schedule = digital["schedule"]
+                actives["digital"][name]["open"] = False
                 for schedule_time in schedule:
                     start = schedule_time["open"]
                     end = schedule_time["close"]
                     if start < time.time() < end:
-                        actives[instruments_type][name]["open"] = True
+                        actives["digital"][name]["open"] = True
+
+        instrument_list = []
+        if 'cfd' in types:
+            instrument_list.append('cfd')
+        if 'forex' in types:
+            instrument_list.append('forex')
+        if 'crypto' in types:
+            instrument_list.append('crypto')
+
+        if len(instrument_list) > 0:
+            for instruments_type in instrument_list:
+                ins_data = self.get_instruments(instruments_type)["instruments"]
+                for detail in ins_data:
+                    name = detail["name"]
+                    schedule = detail["schedule"]
+                    actives[instruments_type][name]["open"] = False
+                    for schedule_time in schedule:
+                        start = schedule_time["open"]
+                        end = schedule_time["close"]
+                        if start < time.time() < end:
+                            actives[instruments_type][name]["open"] = True
 
         return actives
 
@@ -495,7 +595,7 @@ class IQOption:
                 self.connect()"""
 
     def get_currency(self):
-        balances_raw = self.get_balances()
+        balances_raw = self.__get_balances()
         for balance in balances_raw["msg"]:
             if balance["id"] == self.api.global_value.balance_id:
                 return balance["currency"]
@@ -516,19 +616,26 @@ class IQOption:
             time.sleep(self.suspend)
         return self.iqoptionapi.profile.balance"""
 
-    def get_balance(self):
-        balances_raw = self.get_balances()
-        for balance in balances_raw["msg"]:
-            if balance["id"] == self.api.global_value.balance_id:
-                return balance["amount"]
+    def get_balance(self) -> float:
+        try:
+            balances_raw = self.__get_balances()
+            for balance in balances_raw["msg"]:
+                if balance["id"] == self.api.global_value.balance_id:
+                    return float(balance["amount"])
+        except TimeoutError:
+            logging.error('erro in getting balance. Timeout error.')
+            return 0.0
 
-    def get_balances(self):
+    def __get_balances(self):
         with self.api.lock_balances_raw:
             self.api.balances_raw = None
         self.api.get_balances()
+        start = time.time()
         while 1:
+            if time.time()-start > 5:
+                raise TimeoutError('Server not response late 5 seconds')
             with self.api.lock_balances_raw:
-                if self.api.balances_raw != None:
+                if self.api.balances_raw:
                     return self.api.balances_raw
             time.sleep(.1)
 
@@ -541,6 +648,12 @@ class IQOption:
                     return "REAL"
                 elif balance["type"] == 4:
                     return "PRACTICE"
+                elif balance["type"] == 2:
+                    return "TOURNAMENT"
+                else:
+                    logging.error('balance indefined.')
+                    self.close_connect()
+                    return None
 
     def reset_practice_balance(self):
         with self.api.lock_training_balance_reset:
@@ -564,29 +677,58 @@ class IQOption:
         for ins in instrument_type:
             self.api.portfolio(Main_Name=Main_Name, name="portfolio.order-changed", instrument_type=ins)
 
-    def change_balance(self, Balance_MODE):
-        def set_id(b_id):
-            if self.api.global_value.balance_id != None:
-                self.position_change_all("unsubscribeMessage", self.api.global_value.balance_id)
-            self.api.global_value.balance_id = b_id
-            self.position_change_all("subscribeMessage", b_id)
+    def set_tournament(self, balance_mode):
+        def set_id(obj, b_id):
+            if obj.global_value.balance_id:
+                obj.position_change_all("unsubscribeMessage", obj.global_value.balance_id)
+            obj.global_value.balance_id = b_id
+            obj.position_change_all("subscribeMessage", b_id)
 
         real_id = None
         practice_id = None
+        tournament_id = None
 
         for balance in self.get_profile_ansyc()["balances"]:
             if balance["type"] == 1:
                 real_id = balance["id"]
             if balance["type"] == 4:
                 practice_id = balance["id"]
+            if balance["tournament_name"] == balance_mode:
+                tournament_id = balance["id"]
 
-        if Balance_MODE == "REAL":
-            set_id(real_id)
-        elif Balance_MODE == "PRACTICE":
-            set_id(practice_id)
+        if balance_mode == "REAL":
+            set_id(self, real_id)
+
+        elif balance_mode == "PRACTICE":
+            set_id(self, practice_id)
+
+        else:
+            if tournament_id:
+                set_id(self, tournament_id)
+            else:
+                logging.error("ERROR doesn't have this mode")
+                self.close_connect()
+
+    def change_balance(self, balance_mode):
+        def set_id(obj, b_id):
+            if obj.api.global_value.balance_id:
+                obj.position_change_all("unsubscribeMessage", obj.api.global_value.balance_id)
+            obj.api.global_value.balance_id = b_id
+            obj.position_change_all("subscribeMessage", b_id)
+        real_id = None
+        practice_id = None
+        for balance in self.get_profile_ansyc()["balances"]:
+            if balance["type"] == 1:
+                real_id = balance["id"]
+            if balance["type"] == 4:
+                practice_id = balance["id"]
+        if balance_mode == "REAL":
+            set_id(self, real_id)
+        elif balance_mode == "PRACTICE":
+            set_id(self, practice_id)
         else:
             logging.error("ERROR doesn't have this mode")
-            # exit(1)
+            self.close_connect()
             return False
         return True
 
@@ -765,15 +907,33 @@ class IQOption:
                 return None
 
     # ------------------------commission_________
-    # instrument_type: "binary-option"/"turbo-option"/"digital-option"/"crypto"/"forex"/"cfd"
-    def subscribe_commission_changed(self, instrument_type):
+    def subscribe_commission_changed(self, types_actives=('binary', 'turbo', 'digital', 'crypto', 'forex', 'cfd')):
+        instrument_types = []
+        # "binary-option"/"turbo-option"/"digital-option"/"crypto"/"forex"/"cfd"
+        for type_ in types_actives:
+            if type_ in ['binary', 'turbo', 'digital']:
+                instrument_types.append('{}-option'.format(type_))
+            else:
+                instrument_types.append(type_)
+        for instrument_type in instrument_types:
+            self.api.Subscribe_Commission_Changed(instrument_type)
+            time.sleep(.2)
 
-        self.api.Subscribe_Commission_Changed(instrument_type)
-
-    def unsubscribe_commission_changed(self, instrument_type):
-        self.api.Unsubscribe_Commission_Changed(instrument_type)
+    def unsubscribe_commission_changed(self, types_actives=('binary', 'turbo', 'digital', 'crypto', 'forex', 'cfd')):
+        instrument_types = []
+        # "binary-option"/"turbo-option"/"digital-option"/"crypto"/"forex"/"cfd"
+        for type_ in types_actives:
+            if type_ in ['binary', 'turbo', 'digital']:
+                instrument_types.append('{}-option'.format(type_))
+            else:
+                instrument_types.append(type_)
+        for instrument_type in instrument_types:
+            self.api.Unsubscribe_Commission_Changed(instrument_type)
+            time.sleep(.2)
 
     def get_commission_change(self, instrument_type):
+        if instrument_type in ['binary', 'turbo', 'digital']:
+            instrument_type = '{}-option'.format(instrument_type)
         with self.api.lock_subscribe_commission:
             return self.api.subscribe_commission_changed_data[instrument_type]
 
@@ -1037,33 +1197,47 @@ class IQOption:
                     return self.api.underlying_list_data
             time.sleep(.2)
 
-    def get_strike_list(self, active, duration) -> dict:
+    def get_strike_list(self, active, duration) -> tuple:
         """ Function to get strike list of turbo, binary and digital options
 
+            Args:
+               active: (string) name of active.
+               duration: (int) value of expiration instrument in 1, 5 or 15 minutes
+            return:
+               A dict with {price : {call : id, put: id}}
 
+               For example:
 
-                    Args:
-                       active: (string) name of active.
-                       duration: (int) value of expiration instrument in 1, 5 or 15 minutes
-                    return:
-                        A dict with {price : {call : id, put: id}}
+                   {
+                        '0.652290':
+                                    {
+                                        'call': 'doNZDUSD-OTC202008150223PT1MC065229',
+                                        'put':  'doNZDUSD-OTC202008150223PT1MP065229'
+                                    },
+                        '0.652310':
+                                    {
+                                        'call': 'doNZDUSD-OTC202008150223PT1MC065231',
+                                        'put':  'doNZDUSD-OTC202008150223PT1MP065231'},
+                        '0.652330':
+                                    {
+                                        'call': 'doNZDUSD-OTC202008150223PT1MC065233',
+                                        'put':  'doNZDUSD-OTC202008150223PT1MP065233'
+                                    },
+                        '0.652350':
+                                    {
+                                        'call': 'doNZDUSD-OTC202008150223PT1MC065235',
+                                        'put':  'doNZDUSD-OTC202008150223PT1MP065235'
+                                    },
+                        '0.652370':
+                                    {
+                                        'call': 'doNZDUSD-OTC202008150223PT1MC065237',
+                                        'put':  'doNZDUSD-OTC202008150223PT1MP065237'}
+                                    }
+                   }
 
-                        For example:
-
-                        {'0.652290': {'call': 'doNZDUSD-OTC202008150223PT1MC065229',
-                        'put': 'doNZDUSD-OTC202008150223PT1MP065229'},
-                        '0.652310': {'call': 'doNZDUSD-OTC202008150223PT1MC065231',
-                        'put': 'doNZDUSD-OTC202008150223PT1MP065231'},
-                        '0.652330': {'call': 'doNZDUSD-OTC202008150223PT1MC065233',
-                        'put': 'doNZDUSD-OTC202008150223PT1MP065233'},
-                        '0.652350': {'call': 'doNZDUSD-OTC202008150223PT1MC065235',
-                        'put': 'doNZDUSD-OTC202008150223PT1MP065235'},
-                        '0.652370': {'call': 'doNZDUSD-OTC202008150223PT1MC065237',
-                        'put': 'doNZDUSD-OTC202008150223PT1MP065237'}}
-
-                    Raises:
-                       ValueError: parameter expiration invalid
-                """
+            Raises:
+              ValueError: parameter expiration invalid
+        """
         if duration not in [1, 5, 15]:
             raise ValueError('Value of duration period must be 1, 5 or 15')
         with self.api.lock_strike_list:
@@ -1086,7 +1260,8 @@ class IQOption:
                     except:
                         logging.error('**error** get_strike_list read problem...')
                         return self.api.strike_list, None
-                    return self.api.strike_list, ans
+                    else:
+                        return self.api.strike_list, ans
 
     def subscribe_strike_list(self, active, expiration_period):
         """ Function to subscribe strike list of digital option
@@ -1129,78 +1304,50 @@ class IQOption:
 
                For example:
 
-               {'active': 76, 'expiration': {'instant': '2020-08-15T02:38:00Z', 'period': 60,
-                'timestamp': 1597459080000}, 'instant': '2020-08-15T02:37:03Z', 'kind': 'digital-option',
-                'quotes': [{'price': {'ask': 42.065502, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP11839']},
-  b             {'price': {'ask': 46.133311, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP11841']},
-                {'price': {'ask': 53.449076, 'bid': 48.649076}, 'symbols': ['doEURUSD-OTC202008150238PT1MCSPT']},
-                {'price': {'ask': 42.091824, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118438']},
-                {'price': {'ask': 38.261337, 'bid': 24.31197}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118416']},
-                {'price': {'ask': 44.894468, 'bid': 38.484254}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118421']},
-                {'price': {'ask': 37.01829, 'bid': 23.020743}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118423']},
-                {'price': {'ask': None, 'bid': 79.058811}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118412']},
-                {'price': {'ask': 60.172535, 'bid': 51.782535}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118419']},
-                {'price': {'ask': 50.373892, 'bid': 45.622162}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118419']},
-                {'price': {'ask': 50.074479, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118427']},
-                {'price': {'ask': None, 'bid': 71.747036}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118414']},
-                {'price': {'ask': 42.124695, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118402']},
-                {'price': {'ask': 60.285932, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118424']},
-                {'price': {'ask': 41.332193, 'bid': 27.586487}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118422']},
-                {'price': {'ask': 42.271942, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118404']},
-                {'price': {'ask': 42.16473, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118436']},
-                {'price': {'ask': 42.065501, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC11845']},
-                {'price': {'ask': 92.243673, 'bid': 63.633673}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118423']},
-                {'price': {'ask': 68.70834, 'bid': 46.21834}, 'symbols': ['doEURUSD-OTC202008150238PT1MP11842']},
-                {'price': {'ask': 46.469082, 'bid': 39.9197}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118418']},
-                {'price': {'ask': 42.065722, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118444']},
-                {'price': {'ask': 76.265642, 'bid': 50.365642}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118418']},
-                {'price': {'ask': 42.071623, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC11844']},
-                {'price': {'ask': 84.592669, 'bid': 58.692669}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118422']},
-                        {'price': {'ask': 42.065516, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118392']},
-                        {'price': {'ask': 48.793738, 'bid': 44.156415}, 'symbols': ['doEURUSD-OTC202008150238PT1MC11842']},
-                        {'price': {'ask': 43.772954, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118408']},
-                        {'price': {'ask': 47.629317, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118428']},
-                        {'price': {'ask': 77.70037, 'bid': 51.80037}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118421']},
-                        {'price': {'ask': None, 'bid': 72.626214}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118425']},
-                        {'price': {'ask': 97.798283, 'bid': 69.188283}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118424']},
-                        {'price': {'ask': 42.0655, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118454',
-                        'doEURUSD-OTC202008150238PT1MC118452', 'doEURUSD-OTC202008150238PT1MC118456']}, {'price':
-                        {'ask': 42.065505, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118448']},
-                        {'price': {'ask': 42.068783, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118398']},
-                        {'price': {'ask': 42.393921, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118434']},
-                        {'price': {'ask': 55.401547, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118425']},
-                        {'price': {'ask': 56.308859, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118414']},
-                        {'price': {'ask': 51.38202, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118426']},
-                        {'price': {'ask': 42.066133, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118396']},
-                        {'price': {'ask': 42.066747, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC118442']},
-                        {'price': {'ask': 44.518596, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MC11843']},
-                        {'price': {'ask': 42.065607, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118394']},
-                        {'price': {'ask': 42.698198, 'bid': 1.0}, 'symbols': ['doEURUSD-OTC202008150238PT1MP118406']},
-                        {'price': {'ask': None, 'bid': 80.0},
-                        'symbols': ['doEURUSD-OTC202008150238PT1MP11845',
-                                    'doEURUSD-OTC202008150238PT1MP118444', 'doEURUSD-OTC202008150238PT1MC11841',
-                                    'doEURUSD-OTC202008150238PT1MC118408', 'doEURUSD-OTC202008150238PT1MP118428',
-                                    'doEURUSD-OTC202008150238PT1MP118454', 'doEURUSD-OTC202008150238PT1MP118436',
-                                    'doEURUSD-OTC202008150238PT1MC118404', 'doEURUSD-OTC202008150238PT1MP118432',
-                                    'doEURUSD-OTC202008150238PT1MC11839', 'doEURUSD-OTC202008150238PT1MC118394',
-                                    'doEURUSD-OTC202008150238PT1MC118398', 'doEURUSD-OTC202008150238PT1MP118442',
-                                    'doEURUSD-OTC202008150238PT1MP118438', 'doEURUSD-OTC202008150238PT1MP118446',
-                                    'doEURUSD-OTC202008150238PT1MC118402', 'doEURUSD-OTC202008150238PT1MC118396',
-                                    'doEURUSD-OTC202008150238PT1MP11843', 'doEURUSD-OTC202008150238PT1MP118448',
-                                    'doEURUSD-OTC202008150238PT1MC118406', 'doEURUSD-OTC202008150238PT1MP118434',
-                                    'doEURUSD-OTC202008150238PT1MP11844', 'doEURUSD-OTC202008150238PT1MP118456',
-                                    'doEURUSD-OTC202008150238PT1MC1184', 'doEURUSD-OTC202008150238PT1MC118392',
-                                    'doEURUSD-OTC202008150238PT1MP118452']},
-                        {'price': {'ask': 42.080392, 'bid': 1.0},
-                        'symbols': ['doEURUSD-OTC202008150238PT1MP1184']}, {'price': {'ask': 42.065535, 'bid': 1.0},
-                        'symbols': ['doEURUSD-OTC202008150238PT1MC118446']}, {'price': {'ask': None, 'bid': 79.616736},
-                        'symbols': ['doEURUSD-OTC202008150238PT1MP118427']}, {'price': {'ask': 91.03917, 'bid': 62.42917},
-                        'symbols': ['doEURUSD-OTC202008150238PT1MC118416']}, {'price': {'ask': 43.021529, 'bid': 1.0},
-                        'symbols': ['doEURUSD-OTC202008150238PT1MC118432']}, {'price': {'ask': 53.450924, 'bid': 48.650924},
-                        'symbols': ['doEURUSD-OTC202008150238PT1MPSPT']}, {'price': {'ask': None, 'bid': 76.521105},
-                        'symbols': ['doEURUSD-OTC202008150238PT1MP118426']}, {'price': {'ask': 50.648584, 'bid': 1.0},
-                        'symbols': ['doEURUSD-OTC202008150238PT1MP118412']}],
-                        'timestamp': 1597459023000, 'underlying': 'EURUSD-OTC'}
+               {'active': 76,
+                'expiration': {
+                                'instant': '2020-08-15T02:38:00Z',
+                                'period': 60,
+                                'timestamp': 1597459080000},
+                                'instant': '2020-08-15T02:37:03Z',
+                                'kind': 'digital-option',
+                                'quotes': [{'price': { 'ask': 42.065502, 'bid': 1.0 },
+                                            'symbols': ['doEURUSD-OTC202008150238PT1MP11839']},
+                                           {'price': { 'ask': 46.133311, 'bid': 1.0 },
+                                            'symbols': ['doEURUSD-OTC202008150238PT1MP11841']},
+                                           {'price': {'ask': 53.449076, 'bid': 48.649076},
+                                            'symbols': ['doEURUSD-OTC202008150238PT1MCSPT']},
+                                           {'price': {'ask': 42.091824, 'bid': 1.0},
+                                           'symbols': ['doEURUSD-OTC202008150238PT1MC118438']},
+                                           {'price': {'ask': 38.261337, 'bid': 24.31197},
+                                           'symbols': ['doEURUSD-OTC202008150238PT1MP118416']},
+                                           {'price': {'ask': 44.894468, 'bid': 38.484254},
+                                           'symbols': ['doEURUSD-OTC202008150238PT1MC118421']},
+                                           {'price': {'ask': 37.01829, 'bid': 23.020743},
+                                           'symbols': ['doEURUSD-OTC202008150238PT1MC118423']},
+                                           {'price': {'ask': None, 'bid': 79.058811},
+                                           'symbols': ['doEURUSD-OTC202008150238PT1MC118412']},
+                                           {'price': {'ask': 60.172535, 'bid': 51.782535},
+                                           'symbols': ['doEURUSD-OTC202008150238PT1MC118419']},
+                                           {'price': {'ask': 50.373892, 'bid': 45.622162},
+                                           'symbols': ['doEURUSD-OTC202008150238PT1MP118419']},
+                                           {'price': {'ask': 50.074479, 'bid': 1.0},
+                                           'symbols': ['doEURUSD-OTC202008150238PT1MC118427']},
+                                           {'price': {'ask': None, 'bid': 71.747036},
+                                           'symbols': ['doEURUSD-OTC202008150238PT1MC118414']},
+                                           {'price': {'ask': None, 'bid': 80.0},
+                                            'symbols': ['doEURUSD-OTC202008150238PT1MP11845',
+                                                        'doEURUSD-OTC202008150238PT1MP118444',
+                                                        'doEURUSD-OTC202008150238PT1MC11841',
+                                                        'doEURUSD-OTC202008150238PT1MC118408',
+                                                        'doEURUSD-OTC202008150238PT1MP118428',
+                                                        'doEURUSD-OTC202008150238PT1MP118454',
+                                                        'doEURUSD-OTC202008150238PT1MP118436',
+                                                        'doEURUSD-OTC202008150238PT1MC118392',
+                                                        'doEURUSD-OTC202008150238PT1MP118452']}],
+                                            ,
+                                'timestamp': 1597459023000,
+                                'underlying': 'EURUSD-OTC'}
 
                     Raises:
                        ValueError: parameter expiration invalid
@@ -1230,19 +1377,34 @@ class IQOption:
                 For example:
 
                 {'1.184060':
-                {'call': {'profit': None, 'id': 'doEURUSD-OTC202008150153PT1MC118406'},
-                 'put': {'profit': 137.72450107570336, 'id': 'doEURUSD-OTC202008150153PT1MP118406'}},
+                            {'call':
+                                    {'profit': None,
+                                    'id': 'doEURUSD-OTC202008150153PT1MC118406'},
+                             'put':
+                                    {'profit': 137.72450107570336,
+                                    'id': 'doEURUSD-OTC202008150153PT1MP118406'}},
                  '1.184090':
-                 {'call': {'profit': None, 'id': 'doEURUSD-OTC202008150153PT1MC118409'},
-                  'put': {'profit': 137.72450107570336, 'id': 'doEURUSD-OTC202008150153PT1MP118409'}},
-                  '1.184120':
-                  {'call': {'profit': None, 'id': 'doEURUSD-OTC202008150153PT1MC118412'},
-                  'put': {'profit': 137.72450107570336, 'id': 'doEURUSD-OTC202008150153PT1MP118412'}}}
+                            {'call':
+                                    {'profit': None,
+                                      'id': 'doEURUSD-OTC202008150153PT1MC118409'},
+                             'put':
+                                    {'profit': 137.72450107570336,
+                                     'id': 'doEURUSD-OTC202008150153PT1MP118409'}},
+                '1.184120':
+                            {'call':
+                                    {'profit': None,
+                                     'id': 'doEURUSD-OTC202008150153PT1MC118412'},
+                             'put':
+                                    {'profit': 137.72450107570336,
+                                    'id': 'doEURUSD-OTC202008150153PT1MP118412'
+                                    }
+                            }
+                }
 
             Raises:
                ValueError: parameter expiration invalid
         """
-        if duration not in [1, 5, 15]:
+        if duration not in self.durations:
             raise ValueError('Value of duration period must be 1, 5 or 15')
         start_t = time.time()
         while 1:
@@ -1282,15 +1444,115 @@ class IQOption:
                     pass
         return ans
 
-    def get_digital_current_profit(self, ACTIVE, duration):
-        profit = self.api.instrument_quites_generated_data[ACTIVE][duration * 60]
-        for key in profit:
-            if key.find("SPT") != -1:
-                return profit[key]
-        return False
+    def get_actives_by_profit(self, types_active=('digital', 'binary', 'turbo'),
+                              duration=1, minimum_profit=50.0) -> defaultdict:
+        """ Function get assets opened by minimum profit percent
 
-    # thank thiagottjv
-    # https://github.com/Lu-Yi-Hsun/iqoptionapi/issues/65#issuecomment-513998357
+            Args:
+               types_active: Tuple(str, str, str) Types desired in ('digital', 'binary', 'turbo').
+               duration: (int) value of expiration instrument in 1, 5 or 15 minutes
+               minimum_profit: (float) Percentual between 0 and 100 for profit
+
+            return:
+               defaultdict with actives (key) and % profit (value) grouped by type
+
+            For example:
+                        {'turbo':
+                            {'GBPUSD-OTC': 0.8, 'EURUSD-OTC': 0.8, 'EURGBP-OTC': 0.8, 'NZDUSD-OTC': 0.8,
+                            'EURJPY-OTC': 0.8, 'AUDCAD-OTC': 0.8, 'USDCHF-OTC': 0.8}),
+                        'binary':
+                           {'GBPUSD-OTC': 0.85, 'EURUSD-OTC': 0.85, 'EURGBP-OTC': 0.85, 'NZDUSD-OTC': 0.85,
+                           'AUDCAD-OTC': 0.85, 'USDCHF-OTC': 0.85}),
+                        'digital':
+                           {'EURUSD-OTC': 0.8708580722352896, 'EURGBP-OTC': 0.8708459969339827,
+                            'USDCHF-OTC': 0.9511830774203885, 'EURJPY-OTC': 0.7605998941316072,
+                            'NZDUSD-OTC': 0.951184067270895, 'GBPUSD-OTC': 0.8708869835900572,
+                            'GBPJPY-OTC': 0.7605185614464816, 'USDJPY-OTC': 0.7605968874161145,
+                            'AUDCAD-OTC': 0.9512546918894692})}
+
+            Raises:
+                 ValueError: invalid parameters
+                 TimeoutError: without response of server in limit time
+         """
+        if duration not in self.durations:
+            raise ValueError('duration invalid. Must be 1, 5 or 15.')
+        if minimum_profit < 0 or minimum_profit > 100:
+            raise ValueError('Minimum profit is must be between 0 and 100')
+        response = nested_dict(2, float)
+        all_assets = self.get_all_open_time(types=types_active)
+        turbo = True if 'turbo' in types_active else False
+        binary = True if 'binary' in types_active else False
+        digital = True if 'digital' in types_active else False
+        minimum_profit /= 100
+        if turbo or binary:
+            binaries_assets = self.get_all_profit()
+            for k, v in binaries_assets.items():
+                if turbo:
+                    try:
+                        if v['turbo'] >= minimum_profit and all_assets['turbo'][k]['open']:
+                            response['turbo'][k] = float(v['turbo'])
+                    except (KeyError, TypeError):
+                        pass
+                if binary:
+                    try:
+                        if v['binary'] >= minimum_profit and all_assets['binary'][k]['open']:
+                            response['binary'][k] = float(v['binary'])
+                    except (KeyError, TypeError):
+                        pass
+        if digital:
+            for k, v in all_assets['digital'].items():
+                if v['open']:
+                    self.subscribe_strike_list(k, duration)
+                    time.sleep(.2)
+                    profit = .0
+                    start = time.time()
+                    while not profit:
+                        if time.time()-start > 5:
+                            break
+                        profit = self.get_digital_current_profit(k, duration)
+                        time.sleep(.2)
+                    if profit:
+                        profit /= 100
+                        if profit >= minimum_profit and all_assets['digital'][k]['open']:
+                            response['digital'][k] = float(profit)
+                    self.unsubscribe_strike_list(k, duration)
+        return response
+
+    def get_digital_current_profit(self, active, duration) -> float:
+        """ Function to current profit for digital option
+
+            Before call this function, need subscribe strike list with function 'subscribe_strike_list'.
+            Finish the use of this function, must be unsubscribe with function 'unsubscribe_strike_list'.
+
+            Args:
+              active: (string) name of active.
+              duration: (int) value of expiration instrument in 1, 5 or 15 minutes
+
+           return:
+               A float value with current profit, or 0.0 for invalid or not subscribe actives
+
+               For example:   87.09650521515
+
+           Raises:
+               ValueError: parameter duration is invalid
+               InstrumentUnsubscribeError: Indicate that not subscribed in strike list update for duration informed
+        """
+        response = .0
+        if duration not in self.durations:
+            raise ValueError('The duration value must be 1, 5 or 15.')
+        try:
+            with self.api.lock_instrument_quote:
+                profit = self.api.instrument_quites_generated_data[active][duration * 60]
+            for key in profit:
+                if key.find("SPT") != -1:
+                    response = profit[key]
+                    break
+        except KeyError:
+            raise InstrumentUnsubscribeError('Asset {} in duration {} is not subscribed to receive a strike list '
+                                             'update.'.format(active, duration))
+        finally:
+            return response
+
     def buy_digital_spot(self, active, amount, action, duration):
         # Expiration time need to be formatted like this: YYYYMMDDHHII
         # And need to be on GMT time
@@ -2116,7 +2378,7 @@ class IQOption:
                         return self.api.leaderboard_userinfo_deals_client
             except:
                 pass
-            if time.time()-start>10:
+            if time.time()-start > 10:
                 raise TimeoutError('Unable to get user information. Response time limit exceeded.')
             time.sleep(0.2)
 
