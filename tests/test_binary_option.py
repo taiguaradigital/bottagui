@@ -1,27 +1,22 @@
 import unittest
 from pyiqoptionapi import IQOption
 import logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
-
-
-#579121
-email = "cayem28791@mail2paste.com"
-password = "testerforapi2020"
+from config import *
 
 
 class TestBinaryOption(unittest.TestCase):
   
     def test_binary_option(self):
-        iq_api=IQOption(email, password)
+        iq_api = IQOption(email, password)
         iq_api.connect()
         iq_api.change_balance("PRACTICE")
         iq_api.reset_practice_balance()
         self.assertEqual(iq_api.check_connect(), True)
-        all_assets=iq_api.get_all_open_time()
+        all_assets = iq_api.get_all_open_time()
         if all_assets["turbo"]["EURUSD"]["open"]:
-            active="EURUSD"
+            active = "EURUSD"
         else:
-            active="EURUSD-OTC"
+            active = "EURUSD-OTC"
         Money=1
         ACTION_call="call"
         expirations_mode=1

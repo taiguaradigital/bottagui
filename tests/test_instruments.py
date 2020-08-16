@@ -3,13 +3,8 @@ from pyiqoptionapi import IQOption
 import logging
 import time
 from _collections import defaultdict
+from config import *
 
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
-
-# 579121
-email = "cayem28791@mail2paste.com"
-password = "testerforapi2020"
 
 limit = 5
 

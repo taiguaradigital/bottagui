@@ -3,12 +3,7 @@ from pyiqoptionapi import IQOption
 import logging
 import time
 import asyncio
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
-
-# 579121
-email = "cayem28791@mail2paste.com"
-password = "testerforapi2020"
+from config import *
 
 
 class TestDigitalOption(unittest.TestCase):
@@ -23,15 +18,26 @@ class TestDigitalOption(unittest.TestCase):
             actives = "EURUSD"
         else:
             actives = "EURUSD-OTC"
-        Money = 1
+        money = 1
         action_call = "call"
         expirations_mode = 1
-        check_call, id_call = iq_api.buy_digital_spot(actives, Money, action_call, expirations_mode)
+        check_call, id_call = iq_api.buy_digital_spot(actives, money, action_call, expirations_mode)
         self.assertTrue(check_call)
         self.assertTrue(type(id_call) is int)
-        self.assertTrue(iq_api.close_digital_option(id_call))
+        start = time.time()
+        iq_api.subscribe_strike_list(actives, expirations_mode)
+        while not iq_api.check_win_digital_v2(id_call)[0]:
+            if time.time()-start > 60:
+                raise TimeoutError
+            spot = iq_api.get_digital_spot_profit_after_sale(id_call)
+            print('Current Spot After Sale: {}'.format(spot))
+            time.sleep(1)
+        iq_api.unsubscribe_strike_list(actives, expirations_mode)
+        result = iq_api.check_win_digital_v2(id_call)[1]
+        self.assertTrue(type(result) is float)
+        print('Result: {}'.format(result))
         action_call = "put"
-        check_put, id_put = iq_api.buy_digital_spot(actives, Money, action_call, expirations_mode)
+        check_put, id_put = iq_api.buy_digital_spot(actives, money, action_call, expirations_mode)
         self.assertTrue(check_put)
         self.assertTrue(type(id_put) is int)
         self.assertTrue(iq_api.close_digital_option(id_put))

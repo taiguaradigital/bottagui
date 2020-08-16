@@ -51,6 +51,9 @@ class IQOption:
         self.suspend = 0.5
         self.thread = None
         self._lock_candle = threading.RLock()
+        self._lock_subscribed_strike_list = threading.RLock()
+        self.__subscribed_strike_list = []
+        self.__subscribed_live_deal = []
         self.subscribe_candle = []
         self.subscribe_candle_all_size = []
         self.subscribe_mood = []
@@ -1238,7 +1241,7 @@ class IQOption:
             Raises:
               ValueError: parameter expiration invalid
         """
-        if duration not in [1, 5, 15]:
+        if duration not in self.durations:
             raise ValueError('Value of duration period must be 1, 5 or 15')
         with self.api.lock_strike_list:
             self.api.strike_list = None
@@ -1253,7 +1256,7 @@ class IQOption:
                 if self.api.strike_list:
                     try:
                         for data in self.api.strike_list["msg"]["strike"]:
-                            temp = {}
+                            temp = dict()
                             temp["call"] = data["call"]["id"]
                             temp["put"] = data["put"]["id"]
                             ans[("%.6f" % (float(data["value"]) * 10e-7))] = temp
@@ -1272,7 +1275,7 @@ class IQOption:
             Raises:
                ValueError: parameter expiration invalid
         """
-        if expiration_period not in [1, 5, 15]:
+        if expiration_period not in self.durations:
             raise ValueError('Value of duration period must be 1, 5 or 15')
         with self.api.lock_instrument_quote:
             self.api.subscribe_instrument_quites_generated(active, expiration_period)
@@ -1286,11 +1289,11 @@ class IQOption:
                     Raises:
                        ValueError: parameter expiration invalid
         """
-        if expiration_period not in [1, 5, 15]:
+        if expiration_period not in self.durations:
             raise ValueError('Value of duration period must be 1, 5 or 15')
+        self.api.unsubscribe_instrument_quites_generated(active, expiration_period)
         with self.api.lock_instrument_quote:
             del self.api.instrument_quites_generated_data[active]
-            self.api.unsubscribe_instrument_quites_generated(active, expiration_period)
 
     def get_instrument_quites_generated_data(self, active, duration) -> dict:
         """ Function to get data for quites of digital options
@@ -1357,8 +1360,8 @@ class IQOption:
             with self.api.lock_instrument_quote:
                 if self.api.instrument_quotes_generated_raw_data[active][duration * 60] != {}:
                     return self.api.instrument_quotes_generated_raw_data[active][duration * 60]['msg']
-            if time.time() - start > 10:
-                raise TimeoutError
+            if time.time() - start > 30:
+                raise TimeoutError('Server response timeout of 30 seconds has been exceeded')
             time.sleep(.1)
 
     def get_realtime_strike_list(self, active, duration) -> dict:
@@ -1502,6 +1505,7 @@ class IQOption:
         if digital:
             for k, v in all_assets['digital'].items():
                 if v['open']:
+                    subs = True if (k, duration) in self.__subscribed_strike_list else False
                     self.subscribe_strike_list(k, duration)
                     time.sleep(.2)
                     profit = .0
@@ -1590,103 +1594,96 @@ class IQOption:
                         return False, self.api.digital_option_placed_id
             time.sleep(.2)
 
-    def get_digital_spot_profit_after_sale(self, position_id):
+    def get_digital_spot_profit_after_sale(self, position_id) -> float:
+        """
+        Function for get profit after sale for digital option
+
+        Autor: Lu-Yi-Hsun 2019/11/04
+        email: Yihsun1992@gmail.com
+
+        reference: https://github.com/Lu-Yi-Hsun/Decompiler-IQ-Option/blob/master/Source%20Code/5.27.0/
+                   sources/com/iqoption/dto/entity/position/Position.java#L564
+
+        """
         def get_instrument_id_to_bid(data, instrument_id):
-            for row in data["msg"]["quotes"]:
+            for row in data["quotes"]:
                 if row["symbols"][0] == instrument_id:
                     return row["price"]["bid"]
             return None
-
-        # Author:Lu-Yi-Hsun 2019/11/04
-        # email:yihsun1992@gmail.com
-        # Source code reference
-        # https://github.com/Lu-Yi-Hsun/Decompiler-IQ-Option/blob/master/Source%20Code/5.27.0/sources/com/iqoption/dto/entity/position/Position.java#L564
+        start = time.time()
         while self.get_async_order(position_id)["position-changed"] == {}:
-            pass
-        # ___________________/*position*/_________________
+            if time.time()-start > 5:
+                raise TimeoutError('Server response timeout of 5 seconds has been exceeded')
+            time.sleep(.1)
         position = self.get_async_order(position_id)["position-changed"]["msg"]
+        logging.debug('get_digital_spot_profit_after_sale: Position Info -> {}'.format(position))
         # doEURUSD201911040628PT1MPSPT
         # z mean check if call or not
+        direction_instrument = position['raw_event']['instrument_dir']
         if position["instrument_id"].find("MPSPT"):
             z = False
         elif position["instrument_id"].find("MCSPT"):
             z = True
         else:
-            logging.error(
-                'get_digital_spot_profit_after_sale position error' + str(position["instrument_id"]))
+            logging.error('get_digital_spot_profit_after_sale position error' + str(position["instrument_id"]))
+            raise PositionError("Error getting direction of digital option position in "
+                                "'get_digital_spot_profit_after_sale'")
 
-        ACTIVES = position['raw_event']['instrument_underlying']
+        duration = int(position['raw_event']['instrument_period']/60)
+        active = position['raw_event']['instrument_underlying']
         amount = max(position['raw_event']["buy_amount"], position['raw_event']["sell_amount"])
-        start_duration = position["instrument_id"].find("PT") + 2
-        end_duration = start_duration + \
-                       position["instrument_id"][start_duration:].find("M")
-
-        duration = int(position["instrument_id"][start_duration:end_duration])
-        z2 = False
-
-        getAbsCount = position['raw_event']["count"]
-        instrumentStrikeValue = position['raw_event']["instrument_strike_value"] / 1000000.0
-        spotLowerInstrumentStrike = position['raw_event']["extra_data"]["lower_instrument_strike"] / 1000000.0
-        spotUpperInstrumentStrike = position['raw_event']["extra_data"]["upper_instrument_strike"] / 1000000.0
-
+        abs_count = position['raw_event']["count"]
+        strike_value = position['raw_event']["instrument_strike_value"] / 1000000.0
+        lower_strike = position['raw_event']["extra_data"]["lower_instrument_strike"] / 1000000.0
+        upper_strike = position['raw_event']["extra_data"]["upper_instrument_strike"] / 1000000.0
         aVar = position['raw_event']["extra_data"]["lower_instrument_id"]
         aVar2 = position['raw_event']["extra_data"]["upper_instrument_id"]
         getRate = position['raw_event']["currency_rate"]
-
-        # ___________________/*position*/_________________
-        instrument_quites_generated_data = self.get_instrument_quites_generated_data(
-            ACTIVES, duration)
-
-        # https://github.com/Lu-Yi-Hsun/Decompiler-IQ-Option/blob/master/Source%20Code/5.5.1/sources/com/iqoption/dto/entity/position/Position.java#L493
-        f_tmp = get_instrument_id_to_bid(
-            instrument_quites_generated_data, aVar)
+        try:
+            instrument_quites_generated_data = self.get_instrument_quites_generated_data(active, duration)
+        except TimeoutError:
+            raise InstrumentUnsubscribeError('to call this function need subscribe strike list for receive update')
+        # https://github.com/Lu-Yi-Hsun/Decompiler-IQ-Option/blob/master/Source%20Code/5.5.1/
+        # sources/com/iqoption/dto/entity/position/Position.java#L493
+        f_tmp = get_instrument_id_to_bid(instrument_quites_generated_data, aVar)
         # f is bidprice of lower_instrument_id ,f2 is bidprice of upper_instrument_id
-        if f_tmp != None:
+        if f_tmp:
             self.get_digital_spot_profit_after_sale_data[position_id]["f"] = f_tmp
             f = f_tmp
         else:
             f = self.get_digital_spot_profit_after_sale_data[position_id]["f"]
-
-        f2_tmp = get_instrument_id_to_bid(
-            instrument_quites_generated_data, aVar2)
-        if f2_tmp != None:
+        f2_tmp = get_instrument_id_to_bid(instrument_quites_generated_data, aVar2)
+        if f2_tmp:
             self.get_digital_spot_profit_after_sale_data[position_id]["f2"] = f2_tmp
             f2 = f2_tmp
         else:
             f2 = self.get_digital_spot_profit_after_sale_data[position_id]["f2"]
+        if (lower_strike != strike_value) and f and f2:
 
-        if (spotLowerInstrumentStrike != instrumentStrikeValue) and f != None and f2 != None:
-
-            if (spotLowerInstrumentStrike > instrumentStrikeValue or instrumentStrikeValue > spotUpperInstrumentStrike):
+            if lower_strike > strike_value or strike_value > upper_strike:
                 if z:
-                    instrumentStrikeValue = (spotUpperInstrumentStrike - instrumentStrikeValue) / abs(
-                        spotUpperInstrumentStrike - spotLowerInstrumentStrike)
+                    strike_value = (upper_strike - strike_value) / abs(upper_strike - lower_strike)
                     f = abs(f2 - f)
                 else:
-                    instrumentStrikeValue = (instrumentStrikeValue - spotUpperInstrumentStrike) / abs(
-                        spotUpperInstrumentStrike - spotLowerInstrumentStrike)
+                    strike_value = (strike_value - upper_strike) / abs(upper_strike - lower_strike)
                     f = abs(f2 - f)
-
             elif z:
-                f += ((instrumentStrikeValue - spotLowerInstrumentStrike) /
-                      (spotUpperInstrumentStrike - spotLowerInstrumentStrike)) * (f2 - f)
+                f += ((strike_value - lower_strike) / (upper_strike - lower_strike)) * (f2 - f)
             else:
-                instrumentStrikeValue = (spotUpperInstrumentStrike - instrumentStrikeValue) / (
-                        spotUpperInstrumentStrike - spotLowerInstrumentStrike)
+                strike_value = (upper_strike - strike_value) / (upper_strike - lower_strike)
                 f -= f2
-            f = f2 + (instrumentStrikeValue * f)
-
-        if z2:
-            pass
-        if f != None:
+            f = f2 + (strike_value * f)
+        if f:
             # price=f/getRate
-            # https://github.com/Lu-Yi-Hsun/Decompiler-IQ-Option/blob/master/Source%20Code/5.27.0/sources/com/iqoption/dto/entity/position/Position.java#L603
-            price = (f / getRate)
-            # getAbsCount Reference
-            # https://github.com/Lu-Yi-Hsun/Decompiler-IQ-Option/blob/master/Source%20Code/5.27.0/sources/com/iqoption/dto/entity/position/Position.java#L450
-            return price * getAbsCount - amount
+            # https://github.com/Lu-Yi-Hsun/Decompiler-IQ-Option/blob/master/Source%20Code/5.27.0/sources/com/
+            # iqoption/dto/entity/position/Position.java#L603
+            price = f / getRate
+            # abs_count Reference
+            # https://github.com/Lu-Yi-Hsun/Decompiler-IQ-Option/blob/master/Source%20Code/5.27.0/sources/
+            # com/iqoption/dto/entity/position/Position.java#L450
+            return float(price * abs_count - amount)
         else:
-            return None
+            return 0.0
 
     def buy_digital(self, amount, instrument_id):
         with self.api.lock_digital_option_placed_id:
@@ -1726,26 +1723,29 @@ class IQOption:
                 elif data["msg"]["position"]["close_reason"] == "expired":
                     return data["msg"]["position"]["pnl_realized"] - data["msg"]["position"]["buy_amount"]
 
-    def check_win_digital_v2(self, buy_order_id):
-
-        while self.get_async_order(buy_order_id)["position-changed"] == {}:
-            pass
-        order_data = self.get_async_order(buy_order_id)["position-changed"]["msg"]
-        if order_data != None:
-            if order_data["status"] == "closed":
-                if order_data["close_reason"] == "expired":
-                    return True, order_data["close_profit"] - order_data["invest"]
-                elif order_data["close_reason"] == "default":
-                    return True, order_data["pnl_realized"]
+    def check_win_digital_v2(self, buy_order_id) -> tuple:
+        try:
+            while self.get_async_order(buy_order_id)["position-changed"] == {}:
+                time.sleep(.2)
+            order_data = self.get_async_order(buy_order_id)["position-changed"]["msg"]
+            if order_data:
+                if order_data["status"] == "closed":
+                    if order_data["close_reason"] == "expired":
+                        return True, float(order_data["close_profit"] - order_data["invest"])
+                    elif order_data["close_reason"] == "default":
+                        return True, float(order_data["pnl_realized"])
+                else:
+                    return False, None
             else:
                 return False, None
-        else:
+        except Exception as e:
+            logging.error('check_win_digital_v2: error -> {}'.format(e))
             return False, None
 
     async def check_win_digital_v3(self, buy_order_id):
         try:
             order_data = self.get_async_order(buy_order_id)["position-changed"]["msg"]
-            if order_data != None:
+            if order_data:
                 if order_data["status"] == "closed":
                     if order_data["close_reason"] == "expired":
                         return True, order_data["close_profit"] - order_data["invest"]
@@ -1952,23 +1952,23 @@ class IQOption:
                     return self.api.position
             time.sleep(.2)
 
-    def get_digital_position(self, order_id, limit_time=0):
+    def get_digital_position(self, order_id):
         with self.api.lock_positions:
             self.api.position = None
         start = time.time()
         while self.get_async_order(order_id)["position-changed"] == {}:
-            if time.time() - start > 60 and limit_time > 0:
-                raise TimeoutError('tempo de resposta excedido')
+            if time.time() - start > 5:
+                raise TimeoutError('not response of server in 5 seconds')
             time.sleep(.2)
         position_id = self.get_async_order(order_id)["position-changed"]["msg"]["external_id"]
         self.api.get_digital_position(position_id)
-        time.sleep(1)
+        time.sleep(.2)
         start = time.time()
         while 1:
-            if time.time() - start > limit_time and limit_time > 0:
-                raise TimeoutError('tempo de resposta excedido')
+            if time.time() - start > 5:
+                raise TimeoutError('not response of server in 5 seconds')
             with self.api.lock_positions:
-                if self.api.position != None:
+                if self.api.position:
                     return self.api.position
             time.sleep(.2)
 

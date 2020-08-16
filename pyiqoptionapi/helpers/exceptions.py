@@ -1,6 +1,6 @@
 
 
-__all__ = ['InstrumentSuspendedError', 'InstrumentExpiredError', 'InstrumentUnsubscribeError']
+__all__ = ['InstrumentSuspendedError', 'InstrumentExpiredError', 'InstrumentUnsubscribeError', 'PositionError']
 
 
 class InstrumentExpiredError(Exception):
@@ -12,4 +12,8 @@ class InstrumentSuspendedError(Exception):
 
 
 class InstrumentUnsubscribeError(Exception):
+    pass
+
+
+class PositionError(Exception):
     pass

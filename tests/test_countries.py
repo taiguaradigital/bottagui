@@ -2,12 +2,7 @@ import unittest
 from pyiqoptionapi import IQOption
 import logging
 from pyiqoptionapi.helpers import *
-
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
-# 579121
-email = "cayem28791@mail2paste.com"
-password = "testerforapi2020"
+from config import *
 
 
 class TestCountries(unittest.TestCase):

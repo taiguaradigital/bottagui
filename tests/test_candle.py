@@ -4,14 +4,7 @@ from pyiqoptionapi import IQOption
 import logging
 import time
 import datetime
-
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
-
-
-#579121
-email = "cayem28791@mail2paste.com"
-password = "testerforapi2020"
+from config import *
 
 
 class TestCandle(unittest.TestCase):

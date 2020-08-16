@@ -3,13 +3,10 @@ from pyiqoptionapi import IQOption
 import logging
 import time
 import threading
+from config import *
 
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s ( %(threadName)s ): %(message)s')
-
-# 579121
-email = "cayem28791@mail2paste.com"
-password = "testerforapi2020"
+logging.basicConfig(level=logging.INFO, format='%(asctime)s ( %(threadName)s ): %(message)s')
 
 number_of_symbols = 20
 time_run = 30

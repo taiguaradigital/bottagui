@@ -1,11 +1,7 @@
 import unittest
 import os
 from pyiqoptionapi import IQOption
-
-
-#579121
-email = "cayem28791@mail2paste.com"
-password = "testerforapi2020"
+from config import *
 
 
 class TestLogin(unittest.TestCase):

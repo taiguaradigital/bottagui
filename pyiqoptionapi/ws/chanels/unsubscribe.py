@@ -42,14 +42,14 @@ class UnsubscribeCandles(BaseUnsubscribe):
 
 class UnsubscribeInstrumentQuitesGenerated(BaseUnsubscribe):
 
-    def __call__(self, ACTIVE, expiration_period):
+    def __call__(self, active, expiration_period):
         data = {
             "name": "instrument-quotes-generated",
             "params": {
                         "routingFilters": {
-                                            "active": int(OP_code.ACTIVES[ACTIVE]),
-                                            "expiration_period":int(expiration_period*60),
-                                            "kind":"digital-option",
+                                            "active": int(OP_code.ACTIVES[active]),
+                                            "expiration_period": int(expiration_period*60),
+                                            "kind": "digital-option",
                                           },
                      },
             "version": "1.0"
