@@ -1,7 +1,7 @@
 import unittest
 from pyiqoptionapi import IQOption
 import logging
-from config import *
+from tests.config import *
 
 
 class TestUsers(unittest.TestCase):

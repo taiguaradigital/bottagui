@@ -1,7 +1,7 @@
 import unittest
 import os
 from pyiqoptionapi import IQOption
-from config import *
+from tests.config import *
 
 
 class TestLogin(unittest.TestCase):

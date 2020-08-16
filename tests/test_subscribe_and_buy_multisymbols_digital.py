@@ -3,7 +3,7 @@ from pyiqoptionapi import IQOption
 import logging
 import time
 import threading
-from config import *
+from tests.config import *
 
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s ( %(threadName)s ): %(message)s')

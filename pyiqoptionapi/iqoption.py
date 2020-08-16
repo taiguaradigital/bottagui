@@ -29,6 +29,7 @@ from pyiqoptionapi.helpers.decorators import deprecated
 from pyiqoptionapi.helpers.exceptions import *
 from pyiqoptionapi.helpers.utils import nested_dict
 import math
+import asyncio
 
 
 __all__ = ['IQOption']
@@ -396,6 +397,7 @@ class IQOption:
         try:
             if from_position > to_position:
                 raise ValueError('the from_position value cannot be greater than the to_position value.')
+            response = defaultdict(dict)
             if to_position > 10000:
                 data = []
                 step = 10000
@@ -410,7 +412,6 @@ class IQOption:
                     if to_ > to_position:
                         to_ = to_position
                     time.sleep(.2)
-                response = defaultdict(dict)
                 for item in data:
                     for k, v in item.items():
                         response[k] = v
@@ -421,10 +422,10 @@ class IQOption:
         except KeyError:
             logging.error('error getting positional ranking {} from {} to {}'.format(country,
                                                                                      from_position, to_position))
-            return {}
+            return response
         except (TimeoutError, ValueError) as e:
             logging.error(e)
-            return {}
+            return response
 
     def get_instruments(self, type):
         # type="crypto"/"forex"/"cfd"

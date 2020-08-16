@@ -4,7 +4,7 @@ from pyiqoptionapi import IQOption
 import logging
 import time
 import datetime
-from config import *
+from tests.config import *
 
 
 class TestCandle(unittest.TestCase):

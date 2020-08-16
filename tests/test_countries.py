@@ -2,7 +2,7 @@ import unittest
 from pyiqoptionapi import IQOption
 import logging
 from pyiqoptionapi.helpers import *
-from config import *
+from tests.config import *
 
 
 class TestCountries(unittest.TestCase):

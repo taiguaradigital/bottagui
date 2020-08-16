@@ -3,7 +3,7 @@ from pyiqoptionapi import IQOption
 import logging
 import time
 from _collections import defaultdict
-from config import *
+from tests.config import *
 
 
 limit = 5

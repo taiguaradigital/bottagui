@@ -3,12 +3,12 @@ from pyiqoptionapi import IQOption
 import logging
 import time
 import asyncio
-from config import *
+from tests.config import *
 
 
 class TestDigitalOption(unittest.TestCase):
 
-    def test_binary_option(self):
+    def test_digital_option(self):
         iq_api = IQOption(email, password)
         iq_api.connect()
         self.assertEqual(iq_api.check_connect(), True)
@@ -27,7 +27,7 @@ class TestDigitalOption(unittest.TestCase):
         start = time.time()
         iq_api.subscribe_strike_list(actives, expirations_mode)
         while not iq_api.check_win_digital_v2(id_call)[0]:
-            if time.time()-start > 60:
+            if time.time()-start > 65:
                 raise TimeoutError
             spot = iq_api.get_digital_spot_profit_after_sale(id_call)
             print('Current Spot After Sale: {}'.format(spot))

@@ -2,7 +2,7 @@ import unittest
 from pyiqoptionapi import IQOption
 import logging
 import time
-from config import *
+from tests.config import *
 
 
 class TestSubscribeDigitalOption(unittest.TestCase):

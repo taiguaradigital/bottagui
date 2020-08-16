@@ -3,7 +3,7 @@ from pyiqoptionapi import IQOption
 import logging
 import time
 from threading import Thread
-from config import *
+from tests.config import *
 
 
 class TestSubscribeBinaryOption(unittest.TestCase):
