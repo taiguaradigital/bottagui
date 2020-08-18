@@ -179,6 +179,11 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     ######################################################################
 
     ######################################################################
+    position_history_v3 = None
+    lock_position_history_v3 = threading.RLock()
+    ######################################################################
+
+    ######################################################################
     available_leverages = None
     lock_leverage = threading.RLock()
     ######################################################################
@@ -823,6 +828,10 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     @property
     def get_position_history_v2(self):
         return Get_position_history_v2(self)
+
+    @property
+    def get_position_history_v3(self):
+        return Get_position_history_v3(self)
 
     @property
     def get_available_leverages(self):

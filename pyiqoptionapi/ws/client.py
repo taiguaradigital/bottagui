@@ -224,28 +224,32 @@ class WebsocketClient(object):
         elif message["name"] == "deferred-orders":
             with self.api.lock_deferred_orders:
                 self.api.deferred_orders = message
-        elif message["name"]=="position-history":
+        elif message["name"] == "position-history":
             with self.api.lock_position_history:
-                self.api.position_history=message
-        elif message["name"]=="history-positions":
-            with self.api.lock_position_history:
-                self.api.position_history_v2=message
-        elif message["name"]=="available-leverages":
+                self.api.position_history = message
+        elif message["name"] == "history-positions":
+            if message['request_id'] == 'users_history_data':
+                with self.api.lock_position_history_v3:
+                    self.api.position_history_v3 = message
+            else:
+                with self.api.lock_position_history:
+                    self.api.position_history_v2 = message
+        elif message["name"] == "available-leverages":
             with self.api.lock_leverage:
                 self.api.available_leverages=message
-        elif message["name"]=="order-canceled":
+        elif message["name"] == "order-canceled":
             with self.api.lock_order_canceled:
                 self.api.order_canceled=message
-        elif message["name"]=="position-closed":
+        elif message["name"] == "position-closed":
             with self.api.lock_close_position_data:
                 self.api.close_position_data=message
-        elif message["name"]=="overnight-fee":
+        elif message["name"] == "overnight-fee":
             with self.api.lock_overnight_fee:
                 self.api.overnight_fee=message
-        elif message["name"]=="api_game_getoptions_result":
+        elif message["name"] == "api_game_getoptions_result":
             with self.api.lock_api_game_getoptions:
                 self.api.api_game_getoptions_result=message
-        elif message["name"]=="sold-options":
+        elif message["name"] == "sold-options":
             with self.api.lock_sold_options_respond:
                 self.api.sold_options_respond=message
         elif message["name"] == "tpsl-changed":

@@ -21,7 +21,6 @@ import logging
 import operator
 from collections import defaultdict
 from collections import deque
-from itertools import chain
 from datetime import datetime, timedelta
 from pyiqoptionapi.helpers import *
 from .version import VERSION
@@ -29,7 +28,6 @@ from pyiqoptionapi.helpers.decorators import deprecated
 from pyiqoptionapi.helpers.exceptions import *
 from pyiqoptionapi.helpers.utils import nested_dict
 import math
-import asyncio
 
 
 __all__ = ['IQOption']
@@ -64,8 +62,8 @@ class IQOption:
         self.get_realtime_strike_list_temp_data = {}
         self.get_realtime_strike_list_temp_expiration = 0
         self.SESSION_HEADER = {
-            "User-Agent": r"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36"}
-            #"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36"}
+            "User-Agent": r"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                          r"(KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36"}
         self.SESSION_COOKIE = {}
         self.api = None
 
@@ -145,7 +143,7 @@ class IQOption:
     def close_connect(self):
         try:
             self.api.close()
-        except:
+        except TypeError:
             pass
 
     def check_connect(self):
@@ -166,7 +164,7 @@ class IQOption:
         info = self.get_financial_information(active_id)
         try:
             return info["msg"]["data"]["active"]["name"]
-        except:
+        except KeyError:
             return None
 
     def get_financial_information(self, active_id):
@@ -188,7 +186,7 @@ class IQOption:
                country: (string) name of country; default: 'Worldwide'.
                from_position: (int) from position of trades of ranking; Default: 1
                to_position: (int) to position of trades of ranking; Default: 100
-               near_traders_count: (int) number of trades near from ranking of current balance (account) logged; Default: 0
+               near_traders_count: (int) number of trades near from ranking of current balance (account) logged;
                user_country: (int) country id; Default: 0
                near_traders_country_count: (int)
                top_country_count: (int)
@@ -201,28 +199,45 @@ class IQOption:
 
                 {'user_id': 76757666, 'country_id': 0, 'top_type': 2,
                 'top_size': 306056, 'position': 306056, 'user_accounted_expiration_time': 0,
-                'top': {'306056': {'user_id': 76757666, 'user_name': 'Test T.', 'score': 0.0, 'count': 0, 'flag': 'BR'}},
-                'positional': {'1': {'user_id': 16853304, 'user_name': 'Landon J.', 'score': 166105.12, 'count': 378, 'flag': 'MX'},
-                '2': {'user_id': 70036986, 'user_name': 'Yuri G. D.', 'score': 164773.70594, 'count': 100, 'flag': 'GY'},
+                'top': {'306056': {'user_id': 76757666, 'user_name': 'Test T.', 'score': 0.0, 'count': 0,
+                'flag': 'BR'}},
+                'positional': {'1': {'user_id': 16853304, 'user_name': 'Landon J.', 'score': 166105.12,
+                'count': 378, 'flag': 'MX'},
+                '2': {'user_id': 70036986, 'user_name': 'Yuri G. D.', 'score': 164773.70594, 'count': 100,
+                 'flag': 'GY'},
                 '3': {'user_id': 60673219, 'user_name': 'Miguel A. D. R. R.', 'score': 105171.71870499999,
                 'count': 1418, 'flag': 'PE'}, '4': {'user_id': 70528083, 'user_name': 'Emma J.',
                 'score': 104272.26503800003, 'count': 2977, 'flag': 'BR'}, '5': {'user_id': 37503537,
                 'user_name': 'Aaron T.', 'score': 95231.62824200002, 'count': 2707, 'flag': 'KR'},
-                '6': {'user_id': 22908162, 'user_name': 'Adrian C.', 'score': 91862.63630299999, 'count': 189, 'flag': 'TH'},
-                '7': {'user_id': 18021472, 'user_name': 'Riaan F.', 'score': 90754.83420999999, 'count': 5, 'flag': 'ZA'},
-                 '8': {'user_id': 75488497, 'user_name': 'Maria P.', 'score': 84165.703554, 'count': 71, 'flag': 'BR'},
-                 '9': {'user_id': 63822006, 'user_name': 'Landon J.', 'score': 83230.25161299997, 'count': 1376, 'flag': 'CN'},
+                '6': {'user_id': 22908162, 'user_name': 'Adrian C.', 'score': 91862.63630299999, 'count': 189,
+                'flag': 'TH'},
+                '7': {'user_id': 18021472, 'user_name': 'Riaan F.', 'score': 90754.83420999999, 'count': 5,
+                'flag': 'ZA'},
+                 '8': {'user_id': 75488497, 'user_name': 'Maria P.', 'score': 84165.703554, 'count': 71,
+                 'flag': 'BR'},
+                 '9': {'user_id': 63822006, 'user_name': 'Landon J.', 'score': 83230.25161299997, 'count': 1376,
+                 'flag': 'CN'},
                  '10': {'user_id': 43124555, 'user_name': 'Nicola P.', 'score': 80801.75, 'count': 77, 'flag': 'CO'},
-                 '11': {'user_id': 74054648, 'user_name': 'Shaun M.', 'score': 74006.34222399982, 'count': 467, 'flag': 'BM'},
-                 '12': {'user_id': 67204771, 'user_name': 'Nguyen V. M.', 'score': 69622.63050099999, 'count': 204, 'flag': 'VN'},
-                 '13': {'user_id': 3089081, 'user_name': 'Oliver R.', 'score': 67531.43063400002, 'count': 984, 'flag': 'BR'},
-                 '14': {'user_id': 27546345, 'user_name': 'Ka L. K. I.', 'score': 64467.496652999995, 'count': 3788, 'flag': 'HK'},
-                 '15': {'user_id': 45844787, 'user_name': 'Ava C.', 'score': 63811.88065100003, 'count': 65, 'flag': 'TH'},
-                 '16': {'user_id': 76171561, 'user_name': 'Mateo K.', 'score': 60603.130252999996, 'count': 360, 'flag': 'BR'},
-                 '17': {'user_id': 12700851, 'user_name': 'Antonio M. M.', 'score': 58949.28062600001, 'count': 146, 'flag': 'ES'},
-                 '18': {'user_id': 13369320, 'user_name': 'Nelson K.', 'score': 58412.70622599999, 'count': 861, 'flag': 'BR'},
-                 '19': {'user_id': 74393123, 'user_name': 'Marcos S.', 'score': 57744.04904700001, 'count': 607, 'flag': 'BR'},
-                 '20': {'user_id': 13600742, 'user_name': 'shihabudeen s.', 'score': 55662.793837, 'count': 290, 'flag': 'SA'},
+                 '11': {'user_id': 74054648, 'user_name': 'Shaun M.', 'score': 74006.34222399982, 'count': 467,
+                 'flag': 'BM'},
+                 '12': {'user_id': 67204771, 'user_name': 'Nguyen V. M.', 'score': 69622.63050099999,
+                 'count': 204, 'flag': 'VN'},
+                 '13': {'user_id': 3089081, 'user_name': 'Oliver R.', 'score': 67531.43063400002,
+                 'count': 984, 'flag': 'BR'},
+                 '14': {'user_id': 27546345, 'user_name': 'Ka L. K. I.', 'score': 64467.496652999995,
+                 'count': 3788, 'flag': 'HK'},
+                 '15': {'user_id': 45844787, 'user_name': 'Ava C.', 'score': 63811.88065100003, 'count': 65,
+                 'flag': 'TH'},
+                 '16': {'user_id': 76171561, 'user_name': 'Mateo K.', 'score': 60603.130252999996, 'count': 360,
+                 'flag': 'BR'},
+                 '17': {'user_id': 12700851, 'user_name': 'Antonio M. M.', 'score': 58949.28062600001,
+                 'count': 146, 'flag': 'ES'},
+                 '18': {'user_id': 13369320, 'user_name': 'Nelson K.', 'score': 58412.70622599999,
+                 'count': 861, 'flag': 'BR'},
+                 '19': {'user_id': 74393123, 'user_name': 'Marcos S.', 'score': 57744.04904700001,
+                  'count': 607, 'flag': 'BR'},
+                 '20': {'user_id': 13600742, 'user_name': 'shihabudeen s.', 'score': 55662.793837,
+                 'count': 290, 'flag': 'SA'},
                   '21': {'user_id': 61721151, 'user_name': 'João P. N. R. D. S.', 'score': 55325.68611900001,
                   'count': 151, 'flag': 'BR'}, '22': {'user_id': 7201974, 'user_name': 'Jidveian O.',
                    'score': 53778.303679999946, 'count': 3317, 'flag': 'RO'}, '23': {'user_id': 73061677,
@@ -235,19 +250,28 @@ class IQOption:
                     'count': 118, 'flag': 'BR'}, '28': {'user_id': 58474778, 'user_name': 'Tse Y. L.',
                     'score': 50900.173237, 'count': 65, 'flag': 'AR'}, '29': {'user_id': 49768259,
                     'user_name': 'Jose W.', 'score': 50453.08858400001, 'count': 24, 'flag': 'GB'},
-                    '30': {'user_id': 11279531, 'user_name': 'Beng C. C.', 'score': 49738.0, 'count': 187, 'flag': 'MY'},
-                     '31': {'user_id': 76435817, 'user_name': 'saif a.', 'score': 49011.08086, 'count': 93, 'flag': 'IN'},
-                     '32': {'user_id': 44885579, 'user_name': 'Thomas J.', 'score': 46268.943177, 'count': 79, 'flag': 'CR'},
-                     '33': {'user_id': 32150521, 'user_name': 'Lincoln J.', 'score': 45951.23084899997, 'count': 406, 'flag': 'HK'},
-                     '34': {'user_id': 12695474, 'user_name': 'Chase G.', 'score': 45018.26216600001, 'count': 82, 'flag': 'ZM'},
-                      '35': {'user_id': 63648328, 'user_name': 'Hannah F.', 'score': 44705.45424699999, 'count': 619, 'flag': 'BR'},
-                       '36': {'user_id': 53399459, 'user_name': 'Jeerasak T.', 'score': 44288.245914, 'count': 467, 'flag': 'TH'},
+                    '30': {'user_id': 11279531, 'user_name': 'Beng C. C.', 'score': 49738.0, 'count': 187,
+                    'flag': 'MY'},
+                     '31': {'user_id': 76435817, 'user_name': 'saif a.', 'score': 49011.08086, 'count': 93,
+                      'flag': 'IN'},
+                     '32': {'user_id': 44885579, 'user_name': 'Thomas J.', 'score': 46268.943177, 'count': 79,
+                     'flag': 'CR'},
+                     '33': {'user_id': 32150521, 'user_name': 'Lincoln J.', 'score': 45951.23084899997,
+                     'count': 406, 'flag': 'HK'},
+                     '34': {'user_id': 12695474, 'user_name': 'Chase G.', 'score': 45018.26216600001,
+                     'count': 82, 'flag': 'ZM'},
+                      '35': {'user_id': 63648328, 'user_name': 'Hannah F.', 'score': 44705.45424699999,
+                      'count': 619, 'flag': 'BR'},
+                       '36': {'user_id': 53399459, 'user_name': 'Jeerasak T.', 'score': 44288.245914,
+                       'count': 467, 'flag': 'TH'},
                        '37': {'user_id': 71996590, 'user_name': 'Yassar B. A. Z.', 'score': 43467.889462000014,
                        'count': 504, 'flag': 'AE'}, '38': {'user_id': 56120476, 'user_name': 'Rodrigo C. d. S.',
-                       'score': 43206.89382299997, 'count': 137, 'flag': 'BR'}, '39': {'user_id': 76364737, 'user_name':
+                       'score': 43206.89382299997, 'count': 137, 'flag': 'BR'}, '39': {'user_id': 76364737,
+                       'user_name':
                         'paulo r.', 'score': 42710.574925, 'count': 156, 'flag': 'BR'}, '40': {'user_id': 75939247,
                         'user_name': 'Hannah A.', 'score': 42410.82707300001, 'count': 1479, 'flag': 'BR'},
-                        '41': {'user_id': 47147518, 'user_name': 'Jayden D.', 'score': 40648.8, 'count': 287, 'flag': 'MX'},
+                        '41': {'user_id': 47147518, 'user_name': 'Jayden D.', 'score': 40648.8, 'count': 287,
+                        'flag': 'MX'},
                         '42': {'user_id': 71814235, 'user_name': 'Joshua G.', 'score': 39961.432432000016,
                         'count': 206, 'flag': 'CN'}, '43': {'user_id': 33847032, 'user_name': 'Leah K.',
                         'score': 39793.124370000005, 'count': 175, 'flag': 'BR'}, '44': {'user_id': 70832877,
@@ -290,9 +314,15 @@ class IQOption:
                              'user_name': 'Asher R.', 'score': 27851.778259999995, 'count': 897, 'flag': 'MK'},
                              '72': {'user_id': 57697337, 'user_name': 'Austin W.', 'score': 27836.562275000008,
                               'count': 57, 'flag': 'BR'}, '73': {'user_id': 53711757, 'user_name': 'Jonathan C.',
-                              'score': 27646.925839999985, 'count': 94, 'flag': 'BR'}, '74': {'user_id': 75513774, 'user_name': 'Leandro N. Z.', 'score': 27504.669713000018, 'count': 233, 'flag': 'BR'}, '75': {'user_id': 55098777, 'user_name': 'Juan S. L. H.', 'score': 27353.723391, 'count': 42, 'flag': 'CO'}, '76': {'user_id': 26156370, 'user_name': 'Renato P.', 'score': 27305.552034000004, 'count': 43, 'flag': 'BR'}, '77': {'user_id': 38003583, 'user_name': 'Connor J.', 'score': 26991.600000000002, 'count': 1985, 'flag': 'BR'}, '78': {'user_id': 13893128, 'user_name': 'Winai S.', 'score': 26664.688607000007, 'count': 369, 'flag': 'TH'}, '79': {'user_id': 55099058, 'user_name': 'Samuel C. K. D. O.', 'score': 26199.122514000017, 'count': 310, 'flag': 'BR'}, '80': {'user_id': 13372908, 'user_name': 'ayman j.', 'score': 26159.783749000002, 'count': 129, 'flag': 'EG'}, '81': {'user_id': 40606850, 'user_name': 'John H.', 'score': 26034.73452599999, 'count': 201, 'flag': 'MX'}, '82': {'user_id': 45447190, 'user_name': 'Jose A.', 'score': 25187.145059000002, 'count': 112, 'flag': 'TH'}, '83': {'user_id': 69864746, 'user_name': 'LAZARO L. E. S.', 'score': 25173.719999000004, 'count': 37, 'flag': 'BR'}, '84': {'user_id': 45408388, 'user_name': 'Claudio O. D. S. S.', 'score': 24832.376128999997, 'count': 323, 'flag': 'BR'}, '85': {'user_id': 30547186, 'user_name': 'Motsumi M.', 'score': 24620.290607000006, 'count': 407, 'flag': 'ZA'}, '86': {'user_id': 63352997, 'user_name': 'Alexandre S. F. D. M.', 'score': 24498.138975, 'count': 34, 'flag': 'BR'}, '87': {'user_id': 74817835, 'user_name': 'Elijah P.', 'score': 24059.392368, 'count': 51, 'flag': 'SG'}, '88': {'user_id': 51564329, 'user_name': 'Jason W.', 'score': 24045.545209999997, 'count': 18, 'flag': 'PK'}, '89': {'user_id': 24085141, 'user_name': 'NILSON S. D. S.', 'score': 23890.67496699999, 'count': 159, 'flag': 'BR'}, '90': {'user_id': 58364228, 'user_name': 'Nicolas F.', 'score': 23884.130227999998, 'count': 91, 'flag': 'CR'},
-                        '91': {'user_id': 16312131, 'user_name': 'Kenth-Olov S.', 'score': 23844.958760999987, 'count': 674, 'flag': 'SE'},
-                        '92': {'user_id': 59439734, 'user_name': 'Connor S.', 'score': 23625.363886000003, 'count': 133, 'flag': 'BR'},
+                              'score': 27646.925839999985, 'count': 94, 'flag': 'BR'}, '74': {'user_id': 75513774,
+                              'user_name': 'Leandro N. Z.', 'score': 27504.669713000018, 'count': 233, 'flag': 'BR'},
+                               '75': {'user_id': 55098777, 'user_name': 'Juan S. L. H.', 'score': 27353.723391,
+                               'count': 42, 'flag': 'CO'}, '76': {'user_id': 26156370, 'user_name': 'Renato P.',
+                               'score': 27305.552034000004, 'count': 43, 'flag': 'BR'}, '77': {'user_id': 38003583, 'user_name': 'Connor J.', 'score': 26991.600000000002, 'count': 1985, 'flag': 'BR'}, '78': {'user_id': 13893128, 'user_name': 'Winai S.', 'score': 26664.688607000007, 'count': 369, 'flag': 'TH'}, '79': {'user_id': 55099058, 'user_name': 'Samuel C. K. D. O.', 'score': 26199.122514000017, 'count': 310, 'flag': 'BR'}, '80': {'user_id': 13372908, 'user_name': 'ayman j.', 'score': 26159.783749000002, 'count': 129, 'flag': 'EG'}, '81': {'user_id': 40606850, 'user_name': 'John H.', 'score': 26034.73452599999, 'count': 201, 'flag': 'MX'}, '82': {'user_id': 45447190, 'user_name': 'Jose A.', 'score': 25187.145059000002, 'count': 112, 'flag': 'TH'}, '83': {'user_id': 69864746, 'user_name': 'LAZARO L. E. S.', 'score': 25173.719999000004, 'count': 37, 'flag': 'BR'}, '84': {'user_id': 45408388, 'user_name': 'Claudio O. D. S. S.', 'score': 24832.376128999997, 'count': 323, 'flag': 'BR'}, '85': {'user_id': 30547186, 'user_name': 'Motsumi M.', 'score': 24620.290607000006, 'count': 407, 'flag': 'ZA'}, '86': {'user_id': 63352997, 'user_name': 'Alexandre S. F. D. M.', 'score': 24498.138975, 'count': 34, 'flag': 'BR'}, '87': {'user_id': 74817835, 'user_name': 'Elijah P.', 'score': 24059.392368, 'count': 51, 'flag': 'SG'}, '88': {'user_id': 51564329, 'user_name': 'Jason W.', 'score': 24045.545209999997, 'count': 18, 'flag': 'PK'}, '89': {'user_id': 24085141, 'user_name': 'NILSON S. D. S.', 'score': 23890.67496699999, 'count': 159, 'flag': 'BR'}, '90': {'user_id': 58364228, 'user_name': 'Nicolas F.', 'score': 23884.130227999998, 'count': 91, 'flag': 'CR'},
+                        '91': {'user_id': 16312131, 'user_name': 'Kenth-Olov S.', 'score': 23844.958760999987,
+                         'count': 674, 'flag': 'SE'},
+                        '92': {'user_id': 59439734, 'user_name': 'Connor S.', 'score': 23625.363886000003,
+                        'count': 133, 'flag': 'BR'},
                         '93': {'user_id': 69930329, 'user_name': 'MAHASHOOK E.', 'score': 23570.006054000016, 'count': 163, 'flag': 'IN'},
                         '94': {'user_id': 70938445, 'user_name': 'Carter A.', 'score': 23555.709998999984, 'count': 2590, 'flag': 'VE'},
                         '95': {'user_id': 60183775, 'user_name': 'Kevin J.', 'score': 23343.413663999938, 'count': 1250, 'flag': 'SM'},
@@ -2082,7 +2112,7 @@ class IQOption:
                         return False, None
             time.sleep(.2)
 
-    def get_position_history_v2(self, instrument_type, limit, offset, start, end, limit_time=0):
+    def get_position_history_v2(self, instrument_type, limit, offset, start=0, end=0, limit_time=0):
         # instrument_type=crypto forex fx-option multi-option cfd digital-option turbo-option
         with self.api.lock_position_history:
             self.api.position_history_v2 = None
@@ -2100,6 +2130,23 @@ class IQOption:
                         return False, None
             time.sleep(.2)
 
+    def get_position_history_v3(self, user_id, instrument_type, limit, offset, start=0, end=0):
+        with self.api.lock_position_history_v3:
+            self.api.position_history_v3 = None
+        self.api.get_position_history_v3(user_id, instrument_type, limit, offset, start, end)
+        time.sleep(1)
+        start = time.time()
+        while 1:
+            if time.time() - start > 60:
+                raise TimeoutError('tempo de resposta excedido')
+            with self.api.lock_position_history_v3:
+                if self.api.position_history_v3:
+                    if self.api.position_history_v3["status"] == 2000:
+                        return True, self.api.position_history_v3["msg"]
+                    else:
+                        return False, None
+            time.sleep(.2)
+
     def get_available_leverages(self, instrument_type, actives="", limit_time=0):
         with self.api.lock_leverage:
             self.api.available_leverages = None
@@ -2113,7 +2160,7 @@ class IQOption:
             if time.time() - start > limit_time and limit_time > 0:
                 raise TimeoutError('tempo de resposta excedido')
             with self.api.lock_leverage:
-                if self.api.available_leverages != None:
+                if self.api.available_leverages:
                     if self.api.available_leverages["status"] == 2000:
                         return True, self.api.available_leverages["msg"]
                     else:
@@ -2127,7 +2174,7 @@ class IQOption:
         time.sleep(1)
         while 1:
             with self.api.lock_order_canceled:
-                if self.api.order_canceled != None:
+                if self.api.order_canceled:
                     if self.api.order_canceled["status"] == 2000:
                         return True
                     else:
@@ -2153,7 +2200,7 @@ class IQOption:
             return False
 
     def close_position_v2(self, position_id):
-        while self.get_async_order(position_id) == None:
+        while not self.get_async_order(position_id):
             time.sleep(.1)
         position_changed = self.get_async_order(position_id)
         self.api.close_position(position_changed["id"])
