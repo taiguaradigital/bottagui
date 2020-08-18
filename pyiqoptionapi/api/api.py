@@ -51,7 +51,7 @@ from pyiqoptionapi.ws.chanels.heartbeat import Heartbeat
  
 from pyiqoptionapi.ws.chanels.digital_option import *
 from pyiqoptionapi.ws.chanels.api_game_getoptions import *
-from pyiqoptionapi.ws.chanels.sell_option import Sell_Option
+from pyiqoptionapi.ws.chanels.sell_option import SellOption
 from pyiqoptionapi.ws.chanels.change_tpsl import Change_Tpsl
 from pyiqoptionapi.ws.chanels.change_auto_margin_call import ChangeAutoMarginCall
 
@@ -247,12 +247,12 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     ######################################################################
 
     ######################################################################
-    top_assets_updated_data={}
+    top_assets_updated_data = {}
     lock_top_assets_updated = threading.RLock()
     ######################################################################
 
     ######################################################################
-    get_options_v2_data=None
+    get_options_v2_data = None
     lock_get_options_v2 = threading.RLock()
     ######################################################################
 
@@ -285,7 +285,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     ######################################################################
 
     ######################################################################
-    users_availability=None
+    users_availability = None
     lock_users_availability = threading.RLock()
     ######################################################################
 
@@ -753,15 +753,15 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
 
     @property
     def sell_option(self):
-        return Sell_Option(self)
+        return SellOption(self)
 # ____________________for_______digital____________________
 
     def get_digital_underlying(self):
-        msg={"name": "get-underlying-list",
-                                    "version": "2.0",
-                                    "body": {"type": "digital-option"}
-                                    }
-        self.send_websocket_request(name="sendMessage",msg=msg)
+        msg = {"name": "get-underlying-list",
+               "version": "2.0",
+               "body": {"type": "digital-option"}
+              }
+        self.send_websocket_request(name="sendMessage", msg=msg)
 
     @property
     def get_strike_list(self):

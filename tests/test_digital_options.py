@@ -26,8 +26,9 @@ class TestDigitalOption(unittest.TestCase):
         self.assertTrue(type(id_call) is int)
         start = time.time()
         iq_api.subscribe_strike_list(actives, expirations_mode)
+        limit = expirations_mode*60+60
         while not iq_api.check_win_digital_v2(id_call)[0]:
-            if time.time()-start > 65:
+            if time.time()-start > limit:
                 raise TimeoutError
             spot = iq_api.get_digital_spot_profit_after_sale(id_call)
             print('Current Spot After Sale: {}'.format(spot))
@@ -64,7 +65,6 @@ class TestDigitalOption(unittest.TestCase):
                 count += 1
                 time.sleep(.2)
         count = 0
-
         time.sleep(1)
         type_asset = 'digital'
         for active in all_assets[type_asset]:
@@ -78,9 +78,9 @@ class TestDigitalOption(unittest.TestCase):
                 print('Strikes {} digital -> {}'.format(active, strikes))
                 for strike in strikes:
                     print(' -> {} -> {}'.format(strike, strikes[strike]))
-                iq_api.unsubscribe_strike_list(active, duration)
                 time.sleep(1)
                 quites = iq_api.get_instrument_quites_generated_data(active, duration)
                 print('quites for {} ( {} ) -> {}'.format(active, type_asset, quites))
+                iq_api.unsubscribe_strike_list(active, duration)
                 break
         iq_api.close_connect()

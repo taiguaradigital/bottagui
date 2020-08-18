@@ -213,9 +213,7 @@ class Countries(object):
             return self._countries.get(name_short).get('name')
         
     def get_top_countries(self, country='Worldwide'):
-         """
-         return dict {country_id, name_short, profit}
-         """
+         """ return dict {country_id, name_short, profit}  """
          try:
              return self.api.get_leader_board(country, 1, 1, 0)['result']['top_countries']
          except TimeoutError:
@@ -226,7 +224,7 @@ class Countries(object):
                 retries += 1
                 time.sleep(1)
                 response = self.get_top_countries(country)
-                if retries>=3:
+                if retries >= 3:
                      logging.error('all attempts have failed')
                      return False
                 return response

@@ -494,7 +494,6 @@ class IQOption:
         actives = nested_dict(3, dict)
 
         if 'binary' in types or 'turbo' in types:
-            # for binary option turbo and binary
             binary_data = self.get_all_init_v2()
             binary_list = ["binary", "turbo"]
             for option in binary_list:
@@ -510,7 +509,6 @@ class IQOption:
                         actives[option][name]["open"] = active["enabled"]
 
         if 'digital' in types:
-            # for digital
             digital_data = self.get_digital_underlying_list_data()["underlying"]
             for digital in digital_data:
                 name = digital["underlying"]
@@ -522,7 +520,7 @@ class IQOption:
                     if start < time.time() < end:
                         actives["digital"][name]["open"] = True
 
-        instrument_list = []
+        instrument_list = list()
         if 'cfd' in types:
             instrument_list.append('cfd')
         if 'forex' in types:
@@ -542,7 +540,6 @@ class IQOption:
                         end = schedule_time["close"]
                         if start < time.time() < end:
                             actives[instruments_type][name]["open"] = True
-
         return actives
 
     def get_binary_option_detail(self):
@@ -1007,15 +1004,48 @@ class IQOption:
                     pass
             time.sleep(polling_time)
 
-    def check_win_v3(self, id_number):
+    def check_win_v3(self, id_number, expiration=1) -> float:
+        """
+        Function for wait result of order buy options
+
+        This function only will return when the server response result of operation or the time of expiration
+        over without response.
+
+        args:
+            id_number: (int) ID of Transaction for wait result.
+            expiration: (int) value of expiration in minutes of option purchased for time of wait.
+
+        returns:
+            a float with monetary result
+
+        raises:
+            TimeoutError: If server late more that expiration informed.
+        """
+        start = time.time()
+        expiration *= 60
+        # For security, 30 seconds to response after expiration time.
+        expiration += 30
         while 1:
+            if time.time()-start > expiration:
+                raise TimeoutError('The operation result response took longer than the expiration time reported.')
             if self.get_async_order(id_number)["option-closed"] != {}:
                 break
+            time.sleep(.2)
 
         return self.get_async_order(id_number)["option-closed"]["msg"]["profit_amount"] - \
                self.get_async_order(id_number)["option-closed"]["msg"]["amount"]
 
-    async def check_win_v4(self, id_number):
+    def check_win_v4(self, id_number) -> tuple:
+        try:
+            if self.get_async_order(id_number)["option-closed"] == {}:
+                return False, None
+        except KeyError:
+            return False, None
+        else:
+            return True, self.get_async_order(id_number)["option-closed"]["msg"]["profit_amount"] - \
+                   self.get_async_order(id_number)["option-closed"]["msg"]["amount"]
+
+    async def check_win_async(self, id_number):
         try:
             if self.get_async_order(id_number)["option-closed"] == {}:
                 return False, None
@@ -1048,15 +1078,24 @@ class IQOption:
             else:
                 return self.api.game_betinfo.isSuccessful, None
 
-    def get_optioninfo(self, limit):
+    def get_optioninfo(self, limit) -> tuple:
         with self.api.lock_api_game_getoptions:
             self.api.api_game_getoptions_result = None
         self.api.get_options(limit)
         time.sleep(1)
+        start = time.time()
         while 1:
+            if time.time()-start > 30:
+                raise TimeoutError('without response server in 30 seconds of request.')
             with self.api.lock_api_game_getoptions:
-                if self.api.api_game_getoptions_result != None:
-                    return self.api.api_game_getoptions_result
+                if self.api.api_game_getoptions_result:
+                    try:
+                        if self.api.api_game_getoptions_result['msg']['isSuccessful']:
+                            return True, self.api.api_game_getoptions_result['msg']['result']
+                        else:
+                            return False, self.api.api_game_getoptions_result['msg']['message']
+                    except KeyError:
+                        return False, 'Error in getting data of options'
             time.sleep(.2)
 
     def get_optioninfo_v2(self, limit):
@@ -1066,43 +1105,81 @@ class IQOption:
         time.sleep(1)
         while 1:
             with self.api.lock_get_options_v2:
-                if self.api.get_options_v2_data != None:
+                if self.api.get_options_v2_data:
                     return self.api.get_options_v2_data
 
     # __________________________BUY__________________________
 
     # __________________FOR OPTION____________________________
 
-    def buy_multi(self, price, ACTIVES, ACTION, expirations):
+    def buy_multi(self, prices_list, actives_list, directions_list, expirations_list) -> list:
+        """
+               Function for buy list binary or turbo option by raw expirations
+
+               Important: This function only works with binary or turbo options.
+               The len of the lists must be equals. The values of price, active, direction and expiration must
+               be equal index in list for correct execution.
+
+               args:
+                  prices_list: (list) List of prices for buy.
+                  actives_list: (list) List of Ticker for Active for buy.
+                  directions_list: (list) List of direction for order (call or put).
+                  expirations_list: (list) List of expirations of order.
+
+               returns:
+                   returns a list with ids of positions. Case any order not executed,
+                   the returns item of list will be None. The index of list will be equal of order of
+                   received list of orders.
+               """
         with self.api.lock_buy_multi:
             self.api.buy_multi_option = {}
-        if len(price) == len(ACTIVES) == len(ACTION) == len(expirations):
-            buy_len = len(price)
+        buy_len = len(prices_list)
+        if buy_len == len(actives_list) == len(directions_list) == len(expirations_list):
             for idx in range(buy_len):
-                self.api.buyv3(price[idx], self.actives[ACTIVES[idx]], ACTION[idx], expirations[idx], idx)
+                try:
+                    self.api.buyv3(prices_list[idx], self.actives[actives_list[idx]], directions_list[idx],
+                                   expirations_list[idx], idx)
+                except KeyError:
+                    msg = 'there was a problem getting the active code with ticker {}.'.format(actives_list[idx])
+                    raise ValueError(msg)
             while 1:
                 with self.api.lock_buy_multi:
                     if len(self.api.buy_multi_option) >= buy_len:
-                        buy_id = []
+                        buy_id = list()
                         for key in sorted(self.api.buy_multi_option.keys()):
                             try:
                                 value = self.api.buy_multi_option[str(key)]
                                 buy_id.append(value["id"])
-                            except:
+                            except KeyError:
                                 buy_id.append(None)
                         return buy_id
                 time.sleep(.2)
         else:
-            logging.error('buy_multi error please input all same len')
+            raise ValueError('The  len of lists of datas not equals')
 
-    def get_remaning(self, duration):
+    def get_remaning(self, duration) -> int:
         for remaning in get_remaning_time(self.api.timesync.server_timestamp):
             if remaning[0] == duration:
                 return remaning[1]
-        logging.error('get_remaning(self,duration) ERROR duration')
-        return "ERROR duration"
+        return 0
 
-    def buy_by_raw_expirations(self, price, active, direction, option, expired):
+    def buy_by_raw_expirations(self, price, active, direction, type_option, expired) -> tuple:
+        """
+        Function for buy binary or turbo option by raw expirations
+
+        Important: This function only works with binary or turbo options
+
+        args:
+           price: (int) value of order for buy. Mínimum: 1.
+           active: (str) Ticker for Active for buy. For example: "EURUSD"
+           direction: (str) call or put.
+           type_option: (str) turbo or binary.
+           expired: (int) times of expiration for buy
+
+        returns:
+            returns a tuple result (True / False) and id (Case result True, with ID of transaction,
+            else False, reason of failure)
+        """
         with self.api.lock_buy_multi:
             self.api.buy_multi_option = {}
         with self.api.lock_buy:
@@ -1111,68 +1188,83 @@ class IQOption:
         try:
             with self.api.lock_buy_multi:
                 self.api.buy_multi_option[req_id]["id"] = None
-        except:
+        except KeyError:
             pass
-        self.api.buyv3_by_raw_expired(price, self.actives[active], direction, option, expired, request_id=req_id)
+        try:
+            self.api.buyv3_by_raw_expired(price, self.actives[active], direction, type_option, expired,
+                                          request_id=req_id)
+        except KeyError:
+            return False, 'there was a problem getting the active code with ticker {}.'.format(active)
         start_t = time.time()
-        id = None
+        id_order = None
         with self.api.lock_buy_multi:
             self.api.result = None
         while 1:
+            if time.time() - start_t >= 5:
+                logging.error('**warning** buy late 5 sec')
+                return False, 'Timeout response ID Buy'
             with self.api.lock_buy_multi:
-                if self.api.result != None or id != None:
-                    try:
-                        if "message" in self.api.buy_multi_option[req_id].keys():
-                            logging.error('**warning** buy' + str(self.api.buy_multi_option[req_id]["message"]))
-                            return False, self.api.buy_multi_option[req_id]["message"]
-                        return self.api.result, self.api.buy_multi_option[req_id]["id"]
-                    except:
-                        pass
                 try:
-                    id = self.api.buy_multi_option[req_id]["id"]
-                except:
+                    id_order = self.api.buy_multi_option[req_id]["id"]
+                except KeyError:
                     pass
-                if time.time() - start_t >= 5:
-                    logging.error('**warning** buy late 5 sec')
-                    return False, 'Timeout response ID Buy'
+                if self.api.result or id_order:
+                    if "message" in self.api.buy_multi_option[req_id].keys():
+                        logging.error('**warning** buy' + str(self.api.buy_multi_option[req_id]["message"]))
+                        return False, self.api.buy_multi_option[req_id]["message"]
+                    return self.api.result, id_order
             time.sleep(.2)
 
-    def buy(self, price, ACTIVES, ACTION, expirations):
-        with self.api.lock_buy_multi:
-            self.api.buy_multi_option = {}
+    def buy(self, price, active, direction, expirations=1) -> tuple:
+        """
+        Function for buy binary or turbo option
+
+        Important: This function only works with binary or turbo options
+
+        args:
+           price: (int) value of order for buy. Mínimum: 1.
+           active: (str) Ticker for Active for buy. For example: "EURUSD"
+           direction: (str) call or put.
+           expiration: (int) times of expiration for buy
+
+        returns:
+            returns a tuple result (True / False) and id (Case result True, with ID of transaction,
+            else False, reason of failure)
+        """
         with self.api.lock_buy:
             self.api.buy_successful = None
         try:
             with self.api.lock_buy_multi:
+                self.api.buy_multi_option = {}
                 self.api.buy_multi_option["buy"]["id"] = None
-        except:
+        except KeyError:
             pass
-        self.api.buyv3(price, self.actives[ACTIVES], ACTION, expirations, "buy")
+        try:
+            self.api.buyv3(price, self.actives[active], direction, expirations, "buy")
+        except KeyError:
+            return False, 'there was a problem getting the active code with ticker {}.'.format(active)
         start_t = time.time()
         id_buy = None
         with self.api.lock_buy_multi:
             self.api.result = None
         while 1:
+            if time.time() - start_t >= 10:
+                logging.error('**warning** buy late 10 sec')
+                return False, 'Timeout response ID Buy. Verify in IQ Option App or Site if the order was executed.'
             with self.api.lock_buy_multi:
                 try:
+                    id_buy = self.api.buy_multi_option["buy"]["id"]
                     if self.api.result or id_buy:
                         if "message" in self.api.buy_multi_option["buy"].keys():
                             return False, self.api.buy_multi_option["buy"]["message"]
-                        return self.api.result, self.api.buy_multi_option["buy"]["id"]
+                        return self.api.result, id_buy
                 except (KeyError, ValueError):
                     pass
                 except Exception as e:
                     logging.error('get-message-result-buy -> {}'.format(e))
-                try:
-                    id_buy = self.api.buy_multi_option["buy"]["id"]
-                except:
-                    pass
-            if time.time() - start_t >= 5:
-                logging.error('**warning** buy late 5 sec')
-                return False, 'Timeout response ID Buy'
             time.sleep(.1)
 
-    def sell_option(self, options_ids):
+    def sell_option(self, options_ids) -> bool:
         with self.api.lock_sold_options_respond:
             self.api.sold_options_respond = None
         self.api.sell_option(options_ids)
@@ -1182,7 +1274,7 @@ class IQOption:
             with self.api.lock_sold_options_respond:
                 if self.api.sold_options_respond:
                     return self.api.sold_options_respond
-            if time.time()-start > 5:
+            if time.time()-start > 10:
                 logging.error('sell option timeout')
                 return False
             time.sleep(.2)
@@ -1361,8 +1453,8 @@ class IQOption:
             with self.api.lock_instrument_quote:
                 if self.api.instrument_quotes_generated_raw_data[active][duration * 60] != {}:
                     return self.api.instrument_quotes_generated_raw_data[active][duration * 60]['msg']
-            if time.time() - start > 30:
-                raise TimeoutError('Server response timeout of 30 seconds has been exceeded')
+            if time.time() - start > 60:
+                raise TimeoutError('Server response timeout of 60 seconds has been exceeded')
             time.sleep(.1)
 
     def get_realtime_strike_list(self, active, duration) -> dict:
@@ -2147,7 +2239,8 @@ class IQOption:
         name = "live-deal-digital-option"
         if expiration not in [1, 5, 15]:
             raise ValueError('the expiration parameter value must be 1, 5 or 15.')
-        type_active = "PT{}M".format(expiration) #"PT1M"/"PT5M"/"PT15M"
+        # "PT1M"/"PT5M"/"PT15M"
+        type_active = "PT{}M".format(expiration)
         return self.__subscribe_live_deal(name, actives, type_active)
 
     @deprecated
@@ -2176,7 +2269,8 @@ class IQOption:
         name = "live-deal-binary-option-placed"
         if expiration not in [1, 5, 15]:
             raise ValueError('the expiration parameter value must be 1, 5 or 15.')
-        type_active = "PT{}M".format(expiration) #"PT1M"/"PT5M"/"PT15M"
+        # "PT1M"/"PT5M"/"PT15M"
+        type_active = "PT{}M".format(expiration)
         return self.__unsubscribe_live_deal(name, actives, type_active)
 
     def __unsubscribe_live_deal(self, name, actives, type_actives):
@@ -2365,49 +2459,79 @@ class IQOption:
                     return self.api.user_profile_client
             time.sleep(.1)
 
-    def request_leaderboard_userinfo_deals_client(self, user_id, country_id):
+    def request_leaderboard_userinfo_deals_client(self, user_id, country):
         with self.api.lock_leaderboard_userinfo:
             self.api.leaderboard_userinfo_deals_client = None
-        country_id = self.api.countries.get_country_id(country_id)  # Country.ID[country]
+        country_id = None
+        if type(country) is not int:
+            country_id = self.api.countries.get_country_id(country)
+        else:
+            country_id = country
+        if not country_id:
+            raise ValueError('Country id not defined.')
         self.api.Request_Leaderboard_Userinfo_Deals_Client(user_id, country_id)
         time.sleep(.2)
         start = time.time()
         while 1:
             try:
                 with self.api.lock_leaderboard_userinfo:
-                    if self.api.leaderboard_userinfo_deals_client["isSuccessful"] == True:
+                    if self.api.leaderboard_userinfo_deals_client["isSuccessful"]:
                         return self.api.leaderboard_userinfo_deals_client
-            except:
+            except (KeyError, TypeError):
                 pass
-            if time.time()-start > 10:
+            if time.time()-start > 60:
                 raise TimeoutError('Unable to get user information. Response time limit exceeded.')
             time.sleep(0.2)
 
     async def request_leaderboard_userinfo_deals_client_async(self, user_id, country_id):
         with self.api.lock_leaderboard_userinfo:
             self.api.leaderboard_userinfo_deals_client = None
-        country_id = self.api.countries.get_country_id(country_id)  # Country.ID[country]
+        country_id = self.api.countries.get_country_id(country_id)
         self.api.Request_Leaderboard_Userinfo_Deals_Client(user_id, country_id)
         while 1:
             try:
                 with self.api.lock_leaderboard_userinfo:
-                    if self.api.leaderboard_userinfo_deals_client["isSuccessful"] == True:
+                    if self.api.leaderboard_userinfo_deals_client["isSuccessful"]:
                         return self.api.leaderboard_userinfo_deals_client
-            except:
+            except KeyError:
                 pass
             time.sleep(0.2)
 
-    def get_users_availability(self, user_id):
-        with self.api.lock_leaderboard_userinfo:
+    def get_users_availability(self, user_id) -> dict:
+        """Function to get status of user by id
+
+           Returns a dict of status, assets selected
+
+           Args:
+             user_id: (int) id of user.
+
+           Returns:
+             Dict of status of user.
+
+             For example:
+
+              {'statuses':
+                    [{'selected_asset_id': 1,
+                      'selected_asset_type': 7,
+                      'idle_duration': 8,
+                      'selected_instrument_type':
+                      'digital-option',
+                      'platform_id': 2,
+                      'status': 'online',
+                      'user_id': 76671954}]}
+
+           Raises:
+             TimeoutError: Not response of server in 30 seconds
+        """
+        with self.api.lock_users_availability:
             self.api.users_availability = None
         self.api.Get_Users_Availability(user_id)
         time.sleep(.2)
         start = time.time()
         while 1:
-            with self.api.lock_leaderboard_userinfo:
-                if self.api.users_availability != None:
+            with self.api.lock_users_availability:
+                if self.api.users_availability:
                     return self.api.users_availability
-            if time.time()-start > 10:
+            if time.time()-start > 30:
                 raise TimeoutError('failure in get users data. Timeout Response.')
             time.sleep(.2)
-

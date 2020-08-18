@@ -12,8 +12,11 @@ class TestUsers(unittest.TestCase):
         iq_api.change_balance("PRACTICE")
         self.assertEqual(iq_api.check_connect(), True)
         users = iq_api.get_leader_board('Worldwide', 1, 1, 0)
-        iq_api.get_users_availability(30)
-        self.assertTrue(type(iq_api.request_leaderboard_userinfo_deals_client(users['positional']['1']['user_id'],
-                                                                              users['positional']['1']['flag'])) is dict)
+        user_data = iq_api.get_users_availability(users['positional']['1']['user_id'])
+        print(user_data)
+        user_datas = iq_api.request_leaderboard_userinfo_deals_client(users['positional']['1']['user_id'],
+                                                                      users['positional']['1']['flag'])
+        self.assertTrue(type(user_datas) is dict)
+        print(user_datas)
         self.assertTrue(type(iq_api.get_user_profile_client(users['positional']['1']['user_id'])) is dict)
         iq_api.close_connect()

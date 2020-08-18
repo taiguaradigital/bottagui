@@ -36,7 +36,7 @@ class Buyv3_by_raw_expired(Base):
 
     name = "sendMessage"
 
-    def __call__(self, price, active, direction, option,expired,request_id):
+    def __call__(self, price, active, direction, option, expired, request_id):
 
         # thank Darth-Carrotpie's code
         # https://github.com/Lu-Yi-Hsun/iqoptionapi/issues/6
@@ -44,21 +44,21 @@ class Buyv3_by_raw_expired(Base):
         option_id = None
 
         if option == "turbo":
-            option_id = 3 #"turbo"
+            option_id = 3
         elif option == "binary":
-            option_id = 1 #"binary"
+            option_id = 1
 
         data = {
-            "body": {"price": price,
-                     "active_id": active,
-                     "expired": int(expired),
-                     "direction": direction.lower(),
-                     "option_type_id": option_id,
-                     "user_balance_id": int(self.api.global_value.balance_id)
-                     },
-            "name": "binary-options.open-option",
-            "version": "1.0"
-        }
+                 "body": {"price": price,
+                          "active_id": active,
+                          "expired": int(expired),
+                          "direction": direction.lower(),
+                          "option_type_id": option_id,
+                          "user_balance_id": int(self.api.global_value.balance_id)
+                         },
+                 "name": "binary-options.open-option",
+                 "version": "1.0"
+               }
         self.send_websocket_request(self.name, data, str(request_id))
 """
     # thank Darth-Carrotpie's code
