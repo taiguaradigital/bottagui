@@ -43,4 +43,14 @@ class TestCountries(unittest.TestCase):
         self.assertIsNotNone(country_name_2)
         print('ID BR: {}'.format(country_name_2))
 
+        print("___________________ COUNTRY SHORTNAME BY ID __________________________")
+        country_shortname = country.get_country_shortname(country_id_b)
+        self.assertIsNotNone(country_shortname)
+        print('ID {}: {}'.format(country_id_b, country_shortname))
+
+        print("___________________ COUNTRY SHORTNAME BY NAME __________________________")
+        country_shortname_2 = country.get_country_shortname("Brazil")
+        self.assertIsNotNone(country_shortname_2)
+        print('ID BR: {}'.format(country_shortname_2))
+
         iq_api.close_connect()

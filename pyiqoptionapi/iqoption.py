@@ -359,10 +359,16 @@ class IQOption:
         with self.api.lock_leaderbord_deals_client:
             self.api.leaderboard_deals_client = None
 
-        country_id = self.api.countries.get_country_id(country)
-        user_country_id = self.api.countries.get_country_id(user_country_id)
-        if country_id is None:
+        try:
+            country_id = self.api.countries.get_country_id(country)
+        except ValueError:
             raise ValueError('the country name is invalid.')
+        try:
+            if type(user_country_id) is not int:
+                user_country_id = self.api.countries.get_country_id(user_country_id)
+        except ValueError:
+            user_country_id = 0
+            pass
         self.api.Get_Leader_Board(country_id, user_country_id, from_position, to_position, near_traders_country_count,
                                   near_traders_count, top_country_count, top_count, top_type)
         time.sleep(.2)
@@ -424,10 +430,10 @@ class IQOption:
              ValueError: Invalid params from_position or to_position
              TimeoutError: wait response of server late 60 seconds
         """
+        response = defaultdict(dict)
         try:
             if from_position > to_position:
                 raise ValueError('the from_position value cannot be greater than the to_position value.')
-            response = defaultdict(dict)
             if to_position > 10000:
                 data = []
                 step = 10000

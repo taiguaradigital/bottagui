@@ -205,7 +205,8 @@ class Countries(object):
              }
         self._lock = RLock()
 
-    def get_countries_names(self):
+    def get_countries_names(self) -> list:
+        """ Function for return list of countries names """
         with self._lock:
             return list([v['name'] for v in self._countries.values()])
     
@@ -223,7 +224,8 @@ class Countries(object):
         """
         try:
             if type(country) is int:
-                return [v['name'] for k, v in self._countries.items() if v['id'] == country][0]
+                with self._lock:
+                    return [v['name'] for k, v in self._countries.items() if v['id'] == country][0]
             else:
                 with self._lock:
                     return self._countries[country.upper()]['name']
@@ -231,7 +233,30 @@ class Countries(object):
             msg = 'Country {} not not found'.format(country)
             raise ValueError(msg)
 
-    def get_top_countries(self, country='Worldwide'):
+    def get_country_shortname(self, country) -> str:
+        """ Function for get country shortname by ID or name
+
+        args:
+           country: (str or int) Country name ("Brazil") or id (30)
+
+        returns:
+           str with country shortname if found
+
+        raise:
+          ValueError: Country name or ID not found
+        """
+        try:
+            if type(country) is int:
+                with self._lock:
+                    return [k for k, v in self._countries.items() if v['id'] == country][0]
+            else:
+                with self._lock:
+                    return [k for k, v in self._countries.items() if v['name'] == country][0]
+        except (KeyError, IndexError):
+            msg = 'Country {} not not found'.format(country)
+            raise ValueError(msg)
+
+    def get_top_countries(self, country='Worldwide') -> dict:
         """ return dict {country_id, name_short, profit}  """
         try:
             return self.api.get_leader_board(country, 1, 1, 0)['result']['top_countries']
@@ -245,13 +270,14 @@ class Countries(object):
                 response = self.get_top_countries(country)
                 if retries >= 3:
                     logging.error('all attempts have failed')
-                    return False
+                    return {}
                 return response
                  
         except Exception as e:
             logging.error('get-top-countries -> {}'.format(e))
 
-    def get_country_id(self, country):
+    def get_country_id(self, country) -> int:
+        """ Function for get ID of country by shortname or name """
         try:
             if len(country) == 2:
                 with self._lock:
@@ -260,4 +286,7 @@ class Countries(object):
                 with self._lock:
                     return list(filter(lambda value: value['name'] == country, self._countries.values()))[0]['id']
         except KeyError:
-            return None
+            msg = 'Country {} not not found'.format(country)
+            raise ValueError(msg)
+        except TypeError:
+            raise ValueError('The country parameter only accepts string values of name or shortname')
