@@ -2,6 +2,7 @@ from threading import RLock
 import logging
 import time
 
+
 __all__ = ['Countries', ]
 
 
@@ -208,37 +209,55 @@ class Countries(object):
         with self._lock:
             return list([v['name'] for v in self._countries.values()])
     
-    def get_country_name(self, name_short):
-        with self._lock:
-            return self._countries.get(name_short).get('name')
-        
+    def get_country_name(self, country) -> str:
+        """ Function for get country name by ID or shortname
+
+        args:
+           country: (str or int) Country shortname ("BR") or id (30)
+
+        returns:
+           str with country name if found
+
+        raise:
+          ValueError: Country shortname or ID not found
+        """
+        try:
+            if type(country) is int:
+                return [v['name'] for k, v in self._countries.items() if v['id'] == country][0]
+            else:
+                with self._lock:
+                    return self._countries[country.upper()]['name']
+        except (KeyError, IndexError):
+            msg = 'Country {} not not found'.format(country)
+            raise ValueError(msg)
+
     def get_top_countries(self, country='Worldwide'):
-         """ return dict {country_id, name_short, profit}  """
-         try:
-             return self.api.get_leader_board(country, 1, 1, 0)['result']['top_countries']
-         except TimeoutError:
-             logging.error('timeout response. retry new get response in 1 seconds.')
-             retries = 0
-             response = None
-             while not response:
+        """ return dict {country_id, name_short, profit}  """
+        try:
+            return self.api.get_leader_board(country, 1, 1, 0)['result']['top_countries']
+        except TimeoutError:
+            logging.error('timeout response. retry new get response in 1 seconds.')
+            retries = 0
+            response = None
+            while not response:
                 retries += 1
                 time.sleep(1)
                 response = self.get_top_countries(country)
                 if retries >= 3:
-                     logging.error('all attempts have failed')
-                     return False
+                    logging.error('all attempts have failed')
+                    return False
                 return response
                  
-         except Exception as e:
-             logging.error('get-top-countries -> {}'.format(e))
+        except Exception as e:
+            logging.error('get-top-countries -> {}'.format(e))
 
     def get_country_id(self, country):
         try:
-             if len(country) == 2:
-                  with self._lock:
-                       return self._countries[country]['id']
-             else:
-                  with self._lock:
-                       return list(filter(lambda value: value['name'] == country, self._countries.values()))[0]['id']
-        except:
+            if len(country) == 2:
+                with self._lock:
+                    return self._countries[country]['id']
+            else:
+                with self._lock:
+                    return list(filter(lambda value: value['name'] == country, self._countries.values()))[0]['id']
+        except KeyError:
             return None

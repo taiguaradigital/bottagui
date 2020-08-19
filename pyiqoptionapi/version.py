@@ -15,4 +15,4 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
-VERSION = "1.1.3"
+VERSION = "1.1.4"
