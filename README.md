@@ -1,6 +1,7 @@
 # Py IQ Option extra oficial API
 [![Build Status](https://travis-ci.com/deibsoncarvalho/py-iqoption-api.svg?branch=master)](https://travis-ci.com/deibsoncarvalho/py-iqoption-api)
 [![PyPI version](https://badge.fury.io/py/py-iqoption-api.svg)](https://badge.fury.io/py/py-iqoption-api)
+[![codecov](https://codecov.io/gh/deibsoncarvalho/py-iqoption-api/branch/master/graph/badge.svg)](https://codecov.io/gh/deibsoncarvalho/py-iqoption-api)
 
 A Extra oficial API for IQOption Broker of digital, binary options or forex.
 

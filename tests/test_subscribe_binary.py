@@ -12,7 +12,6 @@ class TestSubscribeBinaryOption(unittest.TestCase):
         self.iq_api = IQOption(email, password)
         self.iq_api.connect()
         self.iq_api.change_balance("PRACTICE")
-        self.iq_api.reset_practice_balance()
         self.assertEqual(self.iq_api.check_connect(), True)
         all_assets = self.iq_api.get_all_open_time()
         if all_assets["turbo"]["EURUSD"]["open"]:

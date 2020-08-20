@@ -27,6 +27,7 @@ from .version import VERSION
 from pyiqoptionapi.helpers.decorators import deprecated
 from pyiqoptionapi.helpers.exceptions import *
 from pyiqoptionapi.helpers.utils import nested_dict
+from .config import prepare
 import math
 
 
@@ -38,8 +39,8 @@ class IQOption:
     __version__ = VERSION
     __status__ = "production"
 
-    def __init__(self, email, password):
-
+    def __init__(self, email, password, mode='INFO'):
+        prepare(mode)
         self.__size = [1, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800,
                        3600, 7200, 14400, 28800, 43200, 86400, 604800, 2592000]
         self.__durations = [1, 5, 15]
@@ -119,7 +120,16 @@ class IQOption:
     def balance_id(self):
         return self.api.global_value.balance_id
 
-    def connect(self):
+    def connect(self) -> tuple:
+        """ function for connect to server IQ Option
+
+            return:
+                Tuple with result (connected or not True / False) and Reason of not connected
+
+                For Example:
+                   Connected == (True, None)
+                   Not Connected == (False, 'The balance ID is unavailable. Response timeout.')
+        """
         self.api = _api("iqoption.com", self.email, self.password)
         check = False
         self.api.set_session(headers=self.SESSION_HEADER, cookies=self.SESSION_COOKIE)
@@ -141,12 +151,16 @@ class IQOption:
             return False, reason
 
     def close_connect(self):
+        """ function for close connect of server """
         try:
             self.api.close()
         except TypeError:
             pass
 
-    def check_connect(self):
+    def check_connect(self) -> bool:
+        """ function for check if server is connected """
+        if not self.api.global_value:
+            return False
         return bool(self.api.global_value.check_websocket_if_connect)
 
     def get_all_actives(self):
@@ -192,6 +206,7 @@ class IQOption:
                top_country_count: (int)
                top_count: (int)
                top_type: (int)
+               pooling_time: (int) Time for wait server response. Default is 300ms (5 minutes)
            return:
                A dict of data ranking
 
@@ -318,20 +333,55 @@ class IQOption:
                               'user_name': 'Leandro N. Z.', 'score': 27504.669713000018, 'count': 233, 'flag': 'BR'},
                                '75': {'user_id': 55098777, 'user_name': 'Juan S. L. H.', 'score': 27353.723391,
                                'count': 42, 'flag': 'CO'}, '76': {'user_id': 26156370, 'user_name': 'Renato P.',
-                               'score': 27305.552034000004, 'count': 43, 'flag': 'BR'}, '77': {'user_id': 38003583, 'user_name': 'Connor J.', 'score': 26991.600000000002, 'count': 1985, 'flag': 'BR'}, '78': {'user_id': 13893128, 'user_name': 'Winai S.', 'score': 26664.688607000007, 'count': 369, 'flag': 'TH'}, '79': {'user_id': 55099058, 'user_name': 'Samuel C. K. D. O.', 'score': 26199.122514000017, 'count': 310, 'flag': 'BR'}, '80': {'user_id': 13372908, 'user_name': 'ayman j.', 'score': 26159.783749000002, 'count': 129, 'flag': 'EG'}, '81': {'user_id': 40606850, 'user_name': 'John H.', 'score': 26034.73452599999, 'count': 201, 'flag': 'MX'}, '82': {'user_id': 45447190, 'user_name': 'Jose A.', 'score': 25187.145059000002, 'count': 112, 'flag': 'TH'}, '83': {'user_id': 69864746, 'user_name': 'LAZARO L. E. S.', 'score': 25173.719999000004, 'count': 37, 'flag': 'BR'}, '84': {'user_id': 45408388, 'user_name': 'Claudio O. D. S. S.', 'score': 24832.376128999997, 'count': 323, 'flag': 'BR'}, '85': {'user_id': 30547186, 'user_name': 'Motsumi M.', 'score': 24620.290607000006, 'count': 407, 'flag': 'ZA'}, '86': {'user_id': 63352997, 'user_name': 'Alexandre S. F. D. M.', 'score': 24498.138975, 'count': 34, 'flag': 'BR'}, '87': {'user_id': 74817835, 'user_name': 'Elijah P.', 'score': 24059.392368, 'count': 51, 'flag': 'SG'}, '88': {'user_id': 51564329, 'user_name': 'Jason W.', 'score': 24045.545209999997, 'count': 18, 'flag': 'PK'}, '89': {'user_id': 24085141, 'user_name': 'NILSON S. D. S.', 'score': 23890.67496699999, 'count': 159, 'flag': 'BR'}, '90': {'user_id': 58364228, 'user_name': 'Nicolas F.', 'score': 23884.130227999998, 'count': 91, 'flag': 'CR'},
+                               'score': 27305.552034000004, 'count': 43, 'flag': 'BR'}, '77': {'user_id': 38003583,
+                                'user_name': 'Connor J.', 'score': 26991.600000000002, 'count': 1985, 'flag': 'BR'},
+                                 '78': {'user_id': 13893128, 'user_name': 'Winai S.', 'score': 26664.688607000007,
+                                 'count': 369, 'flag': 'TH'}, '79': {'user_id': 55099058,
+                                 'user_name': 'Samuel C. K. D. O.', 'score': 26199.122514000017,
+                                 'count': 310, 'flag': 'BR'}, '80': {'user_id': 13372908,
+                                 'user_name': 'ayman j.', 'score': 26159.783749000002,
+                                 'count': 129, 'flag': 'EG'}, '81': {'user_id': 40606850,
+                                 'user_name': 'John H.', 'score': 26034.73452599999,
+                                 'count': 201, 'flag': 'MX'}, '82': {'user_id': 45447190,
+                                 'user_name': 'Jose A.', 'score': 25187.145059000002,
+                                 'count': 112, 'flag': 'TH'},
+                                 '83': {'user_id': 69864746, 'user_name': 'LAZARO L. E. S.',
+                                 'score': 25173.719999000004, 'count': 37, 'flag': 'BR'},
+                                 '84': {'user_id': 45408388, 'user_name': 'Claudio O. D. S. S.',
+                                 'score': 24832.376128999997, 'count': 323, 'flag': 'BR'}, '85': {'user_id': 30547186,
+                                  'user_name': 'Motsumi M.', 'score': 24620.290607000006, 'count': 407, 'flag': 'ZA'},
+                                  '86': {'user_id': 63352997, 'user_name': 'Alexandre S. F. D. M.',
+                                  'score': 24498.138975, 'count': 34, 'flag': 'BR'},
+                                  '87': {'user_id': 74817835, 'user_name': 'Elijah P.',
+                                  'score': 24059.392368, 'count': 51, 'flag': 'SG'},
+                                  '88': {'user_id': 51564329, 'user_name': 'Jason W.',
+                                  'score': 24045.545209999997, 'count': 18, 'flag': 'PK'},
+                                  '89': {'user_id': 24085141, 'user_name': 'NILSON S. D. S.',
+                                   'score': 23890.67496699999, 'count': 159, 'flag': 'BR'},
+                                 '90': {'user_id': 58364228, 'user_name': 'Nicolas F.', 'score': 23884.130227999998,
+                                 'count': 91, 'flag': 'CR'},
                         '91': {'user_id': 16312131, 'user_name': 'Kenth-Olov S.', 'score': 23844.958760999987,
                          'count': 674, 'flag': 'SE'},
                         '92': {'user_id': 59439734, 'user_name': 'Connor S.', 'score': 23625.363886000003,
                         'count': 133, 'flag': 'BR'},
-                        '93': {'user_id': 69930329, 'user_name': 'MAHASHOOK E.', 'score': 23570.006054000016, 'count': 163, 'flag': 'IN'},
-                        '94': {'user_id': 70938445, 'user_name': 'Carter A.', 'score': 23555.709998999984, 'count': 2590, 'flag': 'VE'},
-                        '95': {'user_id': 60183775, 'user_name': 'Kevin J.', 'score': 23343.413663999938, 'count': 1250, 'flag': 'SM'},
-                        '96': {'user_id': 43739819, 'user_name': 'Edidio S. R.', 'score': 23297.612573000006, 'count': 171, 'flag': 'BR'},
-                        '97': {'user_id': 63063830, 'user_name': 'sara p.', 'score': 23237.488849000005, 'count': 36, 'flag': 'BR'},
-                        '98': {'user_id': 47044590, 'user_name': 'Wilmar M.', 'score': 23079.158333000007, 'count': 853, 'flag': 'BR'},
-                        '99': {'user_id': 73369844, 'user_name': 'Oliver M.', 'score': 22862.551500000005, 'count': 199, 'flag': 'PK'},
-                        '100': {'user_id': 67658506, 'user_name': 'Rizki A.', 'score': 22757.042248000005, 'count': 84, 'flag': 'ID'}},
-                        'near_traders': {'306056': {'user_id': 76757666, 'user_name': 'Test T.', 'score': 0.0, 'count': 0, 'flag': 'BR'}},
+                        '93': {'user_id': 69930329, 'user_name': 'MAHASHOOK E.', 'score': 23570.006054000016,
+                        'count': 163, 'flag': 'IN'},
+                        '94': {'user_id': 70938445, 'user_name': 'Carter A.', 'score': 23555.709998999984,
+                        'count': 2590, 'flag': 'VE'},
+                        '95': {'user_id': 60183775, 'user_name': 'Kevin J.', 'score': 23343.413663999938,
+                        'count': 1250, 'flag': 'SM'},
+                        '96': {'user_id': 43739819, 'user_name': 'Edidio S. R.', 'score': 23297.612573000006,
+                         'count': 171, 'flag': 'BR'},
+                        '97': {'user_id': 63063830, 'user_name': 'sara p.', 'score': 23237.488849000005,
+                        'count': 36, 'flag': 'BR'},
+                        '98': {'user_id': 47044590, 'user_name': 'Wilmar M.', 'score': 23079.158333000007,
+                        'count': 853, 'flag': 'BR'},
+                        '99': {'user_id': 73369844, 'user_name': 'Oliver M.', 'score': 22862.551500000005,
+                        'count': 199, 'flag': 'PK'},
+                        '100': {'user_id': 67658506, 'user_name': 'Rizki A.', 'score': 22757.042248000005,
+                        'count': 84, 'flag': 'ID'}},
+                        'near_traders': {'306056': {'user_id': 76757666, 'user_name': 'Test T.', 'score': 0.0,
+                        'count': 0, 'flag': 'BR'}},
                         'top_countries': {'1': {'country_id': 30, 'name_short': 'BR', 'profit': 19284363.719301555},
                         '2': {'country_id': 194, 'name_short': 'TH', 'profit': 1757536.3707300012},
                         '3': {'country_id': 225, 'name_short': 'IN', 'profit': 1602008.2317870068},
@@ -344,8 +394,9 @@ class IQOption:
                     '10': {'country_id': 205, 'name_short': 'AE', 'profit': 528335.7821359993}}, 'score': 0.0}}
            Raises:
               ValueError: Invalid params country or user_country
-              TimeoutError: wait response of server late 60 seconds
+              TimeoutError: wait response of server late pooling time informed
         """
+
         total_args = len(args)
         country = kwargs.get('country', args[0] if total_args > 0 else 'Worldwide')
         from_position = kwargs.get('from_position', args[1] if total_args > 1 else 1)
@@ -356,9 +407,13 @@ class IQOption:
         top_country_count = kwargs.get('top_country_count', args[6] if total_args > 6 else 0)
         top_count = kwargs.get('top_count', args[7] if total_args > 7 else 0)
         top_type = kwargs.get('top_type', args[8] if total_args > 8 else 2)
+        pooling_time = kwargs.get('top_type', args[9] if total_args > 9 else 300)
+
+        if pooling_time <= 30 or pooling_time > 600:
+            pooling_time = 600
+            logging.error('pooling time must be 30 and 600 ms')
         with self.api.lock_leaderbord_deals_client:
             self.api.leaderboard_deals_client = None
-
         try:
             country_id = self.api.countries.get_country_id(country)
         except ValueError:
@@ -368,7 +423,7 @@ class IQOption:
                 user_country_id = self.api.countries.get_country_id(user_country_id)
         except ValueError:
             user_country_id = 0
-            pass
+
         self.api.Get_Leader_Board(country_id, user_country_id, from_position, to_position, near_traders_country_count,
                                   near_traders_count, top_country_count, top_count, top_type)
         time.sleep(.2)
@@ -381,8 +436,9 @@ class IQOption:
                     else:
                         logging.error('get-leaderboard-deals failed')
                         return {}
-            if time.time() - start > 60:
-                raise TimeoutError('wait response of iq option server late 60 seconds.')
+            if time.time() - start > pooling_time:
+                msg = 'wait response of iq option server late {} seconds.'.format(pooling_time/60)
+                raise TimeoutError(msg)
             time.sleep(.2)
 
     def get_top_ten_countries(self) -> dict:
@@ -463,14 +519,14 @@ class IQOption:
             logging.error(e)
             return response
 
-    def get_instruments(self, type):
+    def get_instruments(self, type_instrument):
         # type="crypto"/"forex"/"cfd"
         time.sleep(self.suspend)
         with self.api.lock_instruments:
             self.api.instruments = None
         start = time.time()
         while 1:
-            self.api.get_instruments(type)
+            self.api.get_instruments(type_instrument)
             time.sleep(1)
             with self.api.lock_instruments:
                 if self.api.instruments:
@@ -610,12 +666,9 @@ class IQOption:
                                                      "commission"]) / 100.0
         return all_profit
 
-    # ----------------------------------------
-    # ______________________________________self.iqoptionapi.getprofile() https________________________________
-
     def get_profile_ansyc(self):
-        while self.api.profile.msg == None:
-            pass
+        while not self.api.profile.msg:
+            time.sleep(0.1)
         return self.api.profile.msg
 
     """def get_profile(self):
@@ -659,7 +712,7 @@ class IQOption:
             for balance in balances_raw["msg"]:
                 if balance["id"] == self.api.global_value.balance_id:
                     return float(balance["amount"])
-        except TimeoutError:
+        except (TimeoutError, TypeError, KeyError):
             logging.error('erro in getting balance. Timeout error.')
             return 0.0
 
@@ -696,23 +749,23 @@ class IQOption:
         with self.api.lock_training_balance_reset:
             self.api.training_balance_reset_request = None
         self.api.reset_training_balance()
-        time.sleep(1)
+        time.sleep(.2)
         while 1:
             with self.api.lock_training_balance_reset:
-                if self.api.training_balance_reset_request != None:
+                if self.api.training_balance_reset_request is not None:
                     return self.api.training_balance_reset_request
-            time.sleep(.2)
+            time.sleep(.1)
 
-    def position_change_all(self, Main_Name, user_balance_id):
+    def position_change_all(self, main_name, user_balance_id):
         instrument_type = ["cfd", "forex", "crypto", "digital-option", "turbo-option", "binary-option"]
         for ins in instrument_type:
-            self.api.portfolio(Main_Name=Main_Name, name="portfolio.position-changed", instrument_type=ins,
+            self.api.portfolio(Main_Name=main_name, name="portfolio.position-changed", instrument_type=ins,
                                user_balance_id=user_balance_id)
 
-    def order_changed_all(self, Main_Name):
+    def order_changed_all(self, main_name):
         instrument_type = ["cfd", "forex", "crypto", "digital-option", "turbo-option", "binary-option"]
         for ins in instrument_type:
-            self.api.portfolio(Main_Name=Main_Name, name="portfolio.order-changed", instrument_type=ins)
+            self.api.portfolio(Main_Name=main_name, name="portfolio.order-changed", instrument_type=ins)
 
     def set_tournament(self, balance_mode):
         def set_id(obj, b_id):
@@ -746,12 +799,28 @@ class IQOption:
                 logging.error("ERROR doesn't have this mode")
                 self.close_connect()
 
-    def change_balance(self, balance_mode):
+    def change_balance(self, balance_mode) -> bool:
+        """ Function for change type balance
+
+            Has 2 balance types : PRACTICE or REAL
+
+            args:
+              balance_mode: (str) 'PRACTICE or 'REAL'
+
+            returns:
+              bool with result. True for successful change or False for not.
+
+            raise:
+              ValueError: balance mode not 'PRACTICE or 'REAL'
+              ConnectionError: for undefined balance mode
+        """
         def set_id(obj, b_id):
             if obj.api.global_value.balance_id:
                 obj.position_change_all("unsubscribeMessage", obj.api.global_value.balance_id)
             obj.api.global_value.balance_id = b_id
             obj.position_change_all("subscribeMessage", b_id)
+        if balance_mode not in ['PRACTICE', 'REAL']:
+            raise ValueError("ERROR doesn't have this mode")
         real_id = None
         practice_id = None
         for balance in self.get_profile_ansyc()["balances"]:
@@ -766,7 +835,7 @@ class IQOption:
         else:
             logging.error("ERROR doesn't have this mode")
             self.close_connect()
-            return False
+            raise ConnectionError("ERROR doesn't have this mode")
         return True
 
     # ________________________________________________________________________

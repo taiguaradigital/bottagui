@@ -86,14 +86,12 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     lock_socket_option_opened = threading.RLock()
     ######################################################################
 
-
     timesync = TimeSync()
     profile = Profile()
     candles = Candles()
     listinfodata = ListInfoData()
     game_betinfo = GameBetInfoData()
     global_value = Globals()
-
 
     #####################################################################
     api_option_init_all_result = []
@@ -128,7 +126,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     #####################################################################
 
     #####################################################################
-    leaderboard_deals_client=None
+    leaderboard_deals_client = None
     #position_changed_data = nested_dict(2, dict)
     #microserviceName_binary_options_name_option=nested_dict(2,dict)
     lock_leaderbord_deals_client = threading.RLock()
