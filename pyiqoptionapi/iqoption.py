@@ -27,6 +27,7 @@ from .version import VERSION
 from pyiqoptionapi.helpers.decorators import deprecated
 from pyiqoptionapi.helpers.exceptions import *
 from pyiqoptionapi.helpers.utils import nested_dict
+from collections import OrderedDict
 from .config import prepare
 import math
 
@@ -480,13 +481,14 @@ class IQOption:
         """ Function to get top ten countries
 
          return:
-           A dict of ranking traders
+
+           A dict with Columns position, user_id, user_name, score, count, flag
 
            Raises:
              ValueError: Invalid params from_position or to_position
              TimeoutError: wait response of server late 60 seconds
         """
-        response = defaultdict(dict)
+        response = defaultdict(list)
         try:
             if from_position > to_position:
                 raise ValueError('the from_position value cannot be greater than the to_position value.')
@@ -504,9 +506,26 @@ class IQOption:
                     if to_ > to_position:
                         to_ = to_position
                     time.sleep(.2)
+                col_name = []
+                col_id = []
+                col_position = []
+                col_score = []
+                col_flag = []
+                col_count = []
                 for item in data:
                     for k, v in item.items():
-                        response[k] = v
+                        col_position.append(k)
+                        col_id.append(v['user_id'])
+                        col_name.append(v['user_name'])
+                        col_flag.append(v['flag'])
+                        col_score.append(v['score'])
+                        col_count.append(v['count'])
+                response['positions'] = col_position
+                response['user_name'] = col_name
+                response['user_id'] = col_id
+                response['score'] = col_score
+                response['count'] = col_count
+                response['flag'] = col_flag
                 return response
             else:
                 return self.get_leader_board(country=country, from_position=from_position,
