@@ -12,39 +12,73 @@ class TestDigitalOption(unittest.TestCase):
         iq_api = IQOption(email, password)
         iq_api.connect()
         self.assertEqual(iq_api.check_connect(), True)
+        time.sleep(1)
         iq_api.change_balance("PRACTICE")
+
+        time.sleep(5)
+
         all_assets = iq_api.get_all_open_time()
+
         if all_assets["digital"]["EURUSD"]["open"]:
             actives = "EURUSD"
         else:
             actives = "EURUSD-OTC"
+
         money = 1
         action_call = "call"
         expirations_mode = 1
+
+        time.sleep(5)
+
         check_call, id_call = iq_api.buy_digital_spot(actives, money, action_call, expirations_mode)
         self.assertTrue(check_call)
         self.assertTrue(type(id_call) is int)
         start = time.time()
+
+        time.sleep(5)
+
         iq_api.subscribe_strike_list(actives, expirations_mode)
         limit = expirations_mode*60+60
+
         while not iq_api.check_win_digital_v2(id_call)[0]:
+            time.sleep(.2)
             if time.time()-start > limit:
                 raise TimeoutError
             spot = iq_api.get_digital_spot_profit_after_sale(id_call)
             print('Current Spot After Sale: {}'.format(spot))
             time.sleep(1)
+
+        time.sleep(1)
+
         iq_api.unsubscribe_strike_list(actives, expirations_mode)
+
         result = iq_api.check_win_digital_v2(id_call)[1]
         self.assertTrue(type(result) is float)
         print('Result: {}'.format(result))
         action_call = "put"
+
+        time.sleep(5)
+
         check_put, id_put = iq_api.buy_digital_spot(actives, money, action_call, expirations_mode)
         self.assertTrue(check_put)
         self.assertTrue(type(id_put) is int)
+
+        time.sleep(5)
+
         self.assertTrue(iq_api.close_digital_option(id_put))
+
+        time.sleep(5)
+
         asyncio.run(iq_api.check_win_digital_v3(id_put))
+
+        time.sleep(5)
+
         iq_api.get_digital_position(id_put)
+
+        time.sleep(5)
+
         iq_api.check_win_digital(id_put)
+
         limit = 5
         duration = 1
         count = 0
@@ -63,22 +97,24 @@ class TestDigitalOption(unittest.TestCase):
                     print(' -> {} -> {}'.format(strike, strikes[strike]))
             finally:
                 count += 1
-                time.sleep(.2)
+                time.sleep(3)
         count = 0
-        time.sleep(1)
+
+        time.sleep(3)
+
         type_asset = 'digital'
         for active in all_assets[type_asset]:
             if all_assets[type_asset][active]['open']:
                 iq_api.subscribe_strike_list(active, duration)
-                time.sleep(.2)
+                time.sleep(1)
                 current_profit = iq_api.get_digital_current_profit(active, duration)
                 print('current profit for {} ( {} ) -> {}'.format(active, type_asset, current_profit))
-                time.sleep(.2)
+                time.sleep(3)
                 strikes = iq_api.get_realtime_strike_list(active, duration)
                 print('Strikes {} digital -> {}'.format(active, strikes))
                 for strike in strikes:
                     print(' -> {} -> {}'.format(strike, strikes[strike]))
-                time.sleep(1)
+                time.sleep(3)
                 quites = iq_api.get_instrument_quites_generated_data(active, duration)
                 print('quites for {} ( {} ) -> {}'.format(active, type_asset, quites))
                 iq_api.unsubscribe_strike_list(active, duration)

@@ -16,6 +16,8 @@ class TestLeaderBoard(unittest.TestCase):
         iq_api.change_balance("PRACTICE")
         self.assertTrue(iq_api.check_connect())
 
+        time.sleep(5)
+
         print('___________________________ 100 Near Traders to this ranking account ______________________')
         near_traders = iq_api.get_leader_board(near_traders_count=100)
         for k, v in near_traders['near_traders'].items():
@@ -28,6 +30,7 @@ class TestLeaderBoard(unittest.TestCase):
         self.assertTrue(len(top_ten_country) == 10)
         for k, v in top_ten_country.items():
             print(' -> {} - {} Profit: {}'.format(k, v['country_name'], v['profit']))
+
         time.sleep(30)
 
         print('___________________________ Top 100000 Worldwide Traders  ______________________')
@@ -35,6 +38,7 @@ class TestLeaderBoard(unittest.TestCase):
         self.assertIsNotNone(top_traders)
         for k, v in top_traders.items():
             print(' -> {} Name: {} - Profit: {} Country: {}'.format(k, v['user_name'], v['score'], v['flag']))
+
         time.sleep(30)
 
         print('___________________________ Top 50 Brazilians Traders  ______________________')
@@ -43,5 +47,7 @@ class TestLeaderBoard(unittest.TestCase):
         print('Top {} Traders Country {} ->'.format(len(top_traders_country), country))
         for k, v in top_traders_country.items():
             print(' -> {} Name: {} - Profit: {} Country: {}'.format(k, v['user_name'], v['score'], v['flag']))
+
+        time.sleep(5)
 
         iq_api.close_connect()

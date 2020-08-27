@@ -8,7 +8,7 @@ import random
 class TestBinaryOption(unittest.TestCase):
   
     def test_binary_option(self):
-        iq_api = IQOption(email, password)
+        iq_api = IQOption(email, password, 'DEBUG')
         iq_api.connect()
         iq_api.change_balance("PRACTICE")
         self.assertEqual(iq_api.check_connect(), True)
@@ -19,13 +19,15 @@ class TestBinaryOption(unittest.TestCase):
         self.assertTrue(info_ok)
         self.assertIsNotNone(option_info)
         print(option_info)
-        time.sleep(1)
+
+        time.sleep(5)
 
         print("_______________________GET OPTION INFO v2___________________________")
         option_info2 = iq_api.get_optioninfo_v2(10)
         self.assertIsNotNone(option_info2)
         print(option_info2)
-        time.sleep(1)
+
+        time.sleep(5)
 
         print("_______________________BUY BINARY CALL 15 minutes expiration___________________________")
         if all_assets["binary"]["EURUSD"]["open"]:
@@ -38,6 +40,7 @@ class TestBinaryOption(unittest.TestCase):
         check_call, id_call = iq_api.buy(money, active, action_call, expirations_mode)
         self.assertTrue(check_call)
         self.assertTrue(type(id_call) is int)
+
         time.sleep(5)
 
         print("_______________________SELL BINARY CALL___________________________")
@@ -49,9 +52,14 @@ class TestBinaryOption(unittest.TestCase):
             active = "EURUSD-OTC"
         expirations_mode = 1
 
+        time.sleep(5)
+
         print("_______________________BUY TURBO PUT___________________________")
         action_call = "put"
         check_put, id_put = iq_api.buy(money, active, action_call, expirations_mode)
+
+        time.sleep(5)
+
         self.assertTrue(check_put)
         self.assertTrue(type(id_put) is int)
 
@@ -60,13 +68,19 @@ class TestBinaryOption(unittest.TestCase):
         self.assertTrue(type(result) is float)
         print("RESULT FOR BUY TURBO PUT: {:.2f}".format(result))
 
+        time.sleep(5)
+
         print("_______________________BINARY OPTION DETAIL___________________________")
         options_details = iq_api.get_binary_option_detail()
         print(options_details)
 
+        time.sleep(5)
+
         all_profit = iq_api.get_all_profit()
         self.assertIsNotNone(all_profit)
         print(all_profit)
+
+        time.sleep(5)
 
         print("_______________________BUY TURBO CALL___________________________")
         action_call = "call"

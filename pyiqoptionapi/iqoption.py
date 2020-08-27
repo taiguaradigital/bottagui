@@ -31,7 +31,7 @@ from .config import prepare
 import math
 
 
-__all__ = ['IQOption']
+__all__ = ['IQOption', ]
 
 
 class IQOption:
