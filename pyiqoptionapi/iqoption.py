@@ -504,7 +504,7 @@ class IQOption:
                     col_flag.append(v['flag'])
                     col_score.append(v['score'])
                     col_count.append(v['count'])
-            data_cols['positions'] = col_position
+            data_cols['position'] = col_position
             data_cols['user_name'] = col_name
             data_cols['user_id'] = col_id
             data_cols['score'] = col_score

@@ -8,7 +8,7 @@ __all__ = ['Countries', ]
 
 class Countries(object):
 
-    def __init__(self, api):
+    def __init__(self, api=None):
         super(Countries, self).__init__()
         self.api = api
         self._countries = {
@@ -258,6 +258,8 @@ class Countries(object):
 
     def get_top_countries(self, country='Worldwide') -> dict:
         """ return dict {country_id, name_short, profit}  """
+        if not self.api:
+            raise RuntimeError('The API object not instanciate or not informed.')
         try:
             return self.api.get_leader_board(country, 1, 1, 0)['result']['top_countries']
         except TimeoutError:
