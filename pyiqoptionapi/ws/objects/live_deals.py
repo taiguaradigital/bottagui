@@ -22,6 +22,7 @@ from _collections import defaultdict, deque
 import pyiqoptionapi.helpers.constants as OP_code
 import logging
 from functools import lru_cache
+from pyiqoptionapi.helpers.decorators import ThreadedMethod
 
 
 class LiveDeals(Base):
@@ -144,6 +145,7 @@ class LiveDeals(Base):
                 self._all_deals[active].append(deal)
         return response
 
+    @ThreadedMethod
     def set_live_deals(self, message):
         """ get new deals of websocket client """
         try:

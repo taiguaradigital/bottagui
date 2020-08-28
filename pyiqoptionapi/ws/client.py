@@ -2,6 +2,7 @@
 import json
 import logging
 import websocket
+from pyiqoptionapi.helpers.decorators import ThreadedMethod, never_raise
 
 
 class WebsocketClient(object):
@@ -87,9 +88,10 @@ class WebsocketClient(object):
             instrument_type = message["msg"]["instrument_type"]
             active_id = message["msg"]["active_id"]
             Active_name = list(actives.keys())[list(actives.values()).index(active_id)]
-            commission = message["msg"]["commission"]["value"]
+            comm = message["msg"]["commission"]["value"]
+            server_timestamp = self.api.timesync.server_timestamp
             with self.api.lock_subscribe_commission:
-                self.api.subscribe_commission_changed_data[instrument_type][Active_name][self.api.timesync.server_timestamp] = int(commission)
+                self.api.subscribe_commission_changed_data[instrument_type][Active_name][server_timestamp] = int(comm)
             
         #######################################################
         #______________________________________________________
@@ -147,7 +149,7 @@ class WebsocketClient(object):
             try:
                 with self.api.lock_buy:
                     self.api.buy_successful = message["msg"]["isSuccessful"]
-                    self.api.buy_id= message["msg"]["result"]["id"]
+                    self.api.buy_id = message["msg"]["result"]["id"]
             except:
                 pass
         elif message["name"] == "buyV2_result":
