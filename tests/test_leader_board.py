@@ -36,18 +36,13 @@ class TestLeaderBoard(unittest.TestCase):
         print('___________________________ Top 100000 Worldwide Traders  ______________________')
         top_traders = iq_api.get_positional_ranking_traders(to_position=100000)
         self.assertIsNotNone(top_traders)
-        for k, v in top_traders.items():
-            print(' -> {} Name: {} - Profit: {} Country: {}'.format(k, v['user_name'], v['score'], v['flag']))
+        print('Top Traders Country {} ->'.format(top_traders))
 
         time.sleep(30)
 
         print('___________________________ Top 50 Brazilians Traders  ______________________')
         country = 'Brazil'
         top_traders_country = iq_api.get_positional_ranking_traders(country=country, to_position=50)
-        print('Top {} Traders Country {} ->'.format(len(top_traders_country), country))
-        for k, v in top_traders_country.items():
-            print(' -> {} Name: {} - Profit: {} Country: {}'.format(k, v['user_name'], v['score'], v['flag']))
-
-        time.sleep(5)
+        print('Top Traders Country {} ->  {} '.format(country, top_traders_country))
 
         iq_api.close_connect()

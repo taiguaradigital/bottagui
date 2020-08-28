@@ -488,7 +488,29 @@ class IQOption:
              ValueError: Invalid params from_position or to_position
              TimeoutError: wait response of server late 60 seconds
         """
-        response = defaultdict(list)
+        def process_data(data):
+            data_cols = defaultdict(dict)
+            col_name = []
+            col_id = []
+            col_position = []
+            col_score = []
+            col_flag = []
+            col_count = []
+            for item in data:
+                for k, v in item.items():
+                    col_position.append(k)
+                    col_id.append(v['user_id'])
+                    col_name.append(v['user_name'])
+                    col_flag.append(v['flag'])
+                    col_score.append(v['score'])
+                    col_count.append(v['count'])
+            data_cols['positions'] = col_position
+            data_cols['user_name'] = col_name
+            data_cols['user_id'] = col_id
+            data_cols['score'] = col_score
+            data_cols['count'] = col_count
+            data_cols['flag'] = col_flag
+            return data_cols
         try:
             if from_position > to_position:
                 raise ValueError('the from_position value cannot be greater than the to_position value.')
@@ -506,37 +528,17 @@ class IQOption:
                     if to_ > to_position:
                         to_ = to_position
                     time.sleep(.2)
-                col_name = []
-                col_id = []
-                col_position = []
-                col_score = []
-                col_flag = []
-                col_count = []
-                for item in data:
-                    for k, v in item.items():
-                        col_position.append(k)
-                        col_id.append(v['user_id'])
-                        col_name.append(v['user_name'])
-                        col_flag.append(v['flag'])
-                        col_score.append(v['score'])
-                        col_count.append(v['count'])
-                response['positions'] = col_position
-                response['user_name'] = col_name
-                response['user_id'] = col_id
-                response['score'] = col_score
-                response['count'] = col_count
-                response['flag'] = col_flag
-                return response
+                return process_data(data)
             else:
-                return self.get_leader_board(country=country, from_position=from_position,
-                                             to_position=to_position)['positional']
+                return process_data([self.get_leader_board(country=country, from_position=from_position,
+                                                           to_position=to_position)['positional']])
         except KeyError:
             logging.error('error getting positional ranking {} from {} to {}'.format(country,
                                                                                      from_position, to_position))
-            return response
+            return {}
         except (TimeoutError, ValueError) as e:
             logging.error(e)
-            return response
+            return {}
 
     def get_instruments(self, type_instrument):
         # type="crypto"/"forex"/"cfd"
