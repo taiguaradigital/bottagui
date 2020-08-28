@@ -477,7 +477,7 @@ class IQOption:
             logging.error(e)
             return {}
 
-    def get_positional_ranking_traders(self, country='Worldwide', from_position=1, to_position=100) -> dict:
+    def get_positional_ranking_traders(self, country='Worldwide', from_position=1, to_position=100, pooling_time=30) -> dict:
         """ Function to get top ten countries
 
          return:
@@ -522,7 +522,7 @@ class IQOption:
                 to_ = step
                 for _ in range(loop):
                     data.append(self.get_leader_board(country=country, from_position=from_,
-                                                      to_position=to_)['positional'])
+                                                      to_position=to_, pooling_time=pooling_time)['positional'])
                     from_ += step
                     to_ += step
                     if to_ > to_position:
@@ -531,7 +531,8 @@ class IQOption:
                 return process_data(data)
             else:
                 return process_data([self.get_leader_board(country=country, from_position=from_position,
-                                                           to_position=to_position)['positional']])
+                                                           to_position=to_position,
+                                                           pooling_time=pooling_time)['positional']])
         except KeyError:
             logging.error('error getting positional ranking {} from {} to {}'.format(country,
                                                                                      from_position, to_position))
