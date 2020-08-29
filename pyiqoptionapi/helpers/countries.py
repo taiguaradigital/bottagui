@@ -223,7 +223,7 @@ class Countries(object):
           ValueError: Country shortname or ID not found
         """
         try:
-            if type(country) is int:
+            if country.isdigit():
                 with self._lock:
                     return [v['name'] for k, v in self._countries.items() if v['id'] == country][0]
             else:
@@ -232,6 +232,8 @@ class Countries(object):
         except (KeyError, IndexError):
             msg = 'Country {} not not found'.format(country)
             raise ValueError(msg)
+        except Exception as e:
+            logging.error('error in getting country name -> {}'.format(e))
 
     def get_country_shortname(self, country) -> str:
         """ Function for get country shortname by ID or name
