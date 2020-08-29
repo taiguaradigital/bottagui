@@ -223,7 +223,7 @@ class Countries(object):
           ValueError: Country shortname or ID not found
         """
         try:
-            if country.isdigit():
+            if type(country) is int:
                 with self._lock:
                     return [v['name'] for k, v in self._countries.items() if v['id'] == country][0]
             else:

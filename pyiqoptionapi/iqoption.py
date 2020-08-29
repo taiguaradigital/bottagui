@@ -412,11 +412,14 @@ class IQOption:
 
         if pooling_time <= 30 or pooling_time > 600:
             pooling_time = 600
-            logging.error('pooling time must be 30 and 600 ms')
+            logging.error('pooling time must be 30 and 600 seconds')
         with self.api.lock_leaderbord_deals_client:
             self.api.leaderboard_deals_client = None
         try:
-            country_id = self.api.countries.get_country_id(country)
+            if type(country) is not int:
+                country_id = self.api.countries.get_country_id(country)
+            else:
+                country_id = country
         except ValueError:
             raise ValueError('the country name is invalid.')
         try:
