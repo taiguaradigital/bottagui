@@ -19,11 +19,13 @@ class TestTradersDetails(unittest.TestCase):
         else:
             active = "EURUSD-OTC"
         print("_____________subscribe_live_deal digital_______________")
+        time.sleep(3)
         iq_api.subscribe_live_deal_digital(active)
         start_t = time.time()
         start = True
         limit = 30
         count = 0
+        time.sleep(3)
         while count < limit:
             entrances = iq_api.get_live_deal_digital(active)
             if entrances:
@@ -35,6 +37,7 @@ class TestTradersDetails(unittest.TestCase):
                     print("_______get_user_profile_client__________")
                     pro_data = iq_api.get_user_profile_client(user_id)
                     print(pro_data)
+                    time.sleep(3)
                     print("___________request_leaderboard_userinfo_deals_client______")
                     user_data = iq_api.request_leaderboard_userinfo_deals_client(user_id, country_id)
                     print(user_data)
@@ -45,13 +48,14 @@ class TestTradersDetails(unittest.TestCase):
                     print("This week worldwide:" + str(worldwide))
                     print("This week's gross profit:" + str(profit))
                     print("\n\n")
-
+                    time.sleep(3)
                     print("___________get_users_availability____________")
                     print(iq_api.get_users_availability(user_id))
                     print("\n\n")
                     count += 1
-                    time.sleep(1)
-                time.sleep(1)
+                    time.sleep(3)
+                time.sleep(3)
         print("_____________unsubscribe_live_deal digital_______________")
         iq_api.subscribe_live_deal_digital(active)
+        time.sleep(3)
         iq_api.close_connect()

@@ -2606,7 +2606,26 @@ class IQOption:
                     return self.api.user_profile_client
             time.sleep(.1)
 
-    def request_leaderboard_userinfo_deals_client(self, user_id, country):
+    @deprecated
+    def request_leaderboard_userinfo_deals_client(self, user_id, country_id):
+        with self.api.lock_leaderboard_userinfo:
+            self.api.leaderboard_userinfo_deals_client = None
+
+        while True:
+            try:
+                with self.api.lock_leaderboard_userinfo:
+                    if self.api.leaderboard_userinfo_deals_client["isSuccessful"]:
+                        break
+            except (KeyError, TypeError):
+                pass
+            self.api.Request_Leaderboard_Userinfo_Deals_Client(
+                user_id, country_id)
+            time.sleep(0.2)
+
+        with self.api.lock_leaderboard_userinfo:
+            return self.api.leaderboard_userinfo_deals_client
+
+    def request_leaderboard_userinfo_deals_client_v2(self, user_id, country):
         with self.api.lock_leaderboard_userinfo:
             self.api.leaderboard_userinfo_deals_client = None
         country_id = None
@@ -2616,18 +2635,17 @@ class IQOption:
             country_id = country
         if not country_id:
             raise ValueError('Country id not defined.')
-        self.api.Request_Leaderboard_Userinfo_Deals_Client(user_id, country_id)
-        time.sleep(.2)
         start = time.time()
         while 1:
+            if time.time()-start > 60:
+                raise TimeoutError('Unable to get user information. Response time limit exceeded.')
             try:
                 with self.api.lock_leaderboard_userinfo:
                     if self.api.leaderboard_userinfo_deals_client["isSuccessful"]:
                         return self.api.leaderboard_userinfo_deals_client
             except (KeyError, TypeError):
                 pass
-            if time.time()-start > 60:
-                raise TimeoutError('Unable to get user information. Response time limit exceeded.')
+            self.api.Request_Leaderboard_Userinfo_Deals_Client(user_id, country_id)
             time.sleep(0.2)
 
     async def request_leaderboard_userinfo_deals_client_async(self, user_id, country_id):
