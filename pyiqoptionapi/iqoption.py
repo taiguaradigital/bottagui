@@ -1965,7 +1965,7 @@ class IQOption:
             logging.error('check_win_digital_v2: error -> {}'.format(e))
             return False, None
 
-    async def check_win_digital_v3(self, buy_order_id):
+    def check_win_digital_v3(self, buy_order_id):
         try:
             order_data = self.get_async_order(buy_order_id)["position-changed"]["msg"]
             if order_data:
@@ -1981,6 +1981,21 @@ class IQOption:
         except:
             return False, None
 
+    async def check_win_digital_v3_async(self, buy_order_id):
+        try:
+            order_data = self.get_async_order(buy_order_id)["position-changed"]["msg"]
+            if order_data:
+                if order_data["status"] == "closed":
+                    if order_data["close_reason"] == "expired":
+                        return True, order_data["close_profit"] - order_data["invest"]
+                    elif order_data["close_reason"] == "default":
+                        return True, order_data["pnl_realized"]
+                else:
+                    return False, None
+            else:
+                return False, None
+        except:
+            return False, None
     # ----------------------------------------------------------
     # -----------------BUY_for__Forex__&&__stock(cfd)__&&__ctrpto
 
