@@ -71,6 +71,8 @@ from pyiqoptionapi.helpers.utils import nested_dict
 from collections import defaultdict
 
 import threading
+import time
+from queue import Queue
 
 # InsecureRequestWarning: Unverified HTTPS request is being made.
 # Adding certificate verification is strongly advised.
@@ -320,6 +322,9 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         with self.lock_buy:
             self.buy_successful = None
 
+        self._queue_websocket_requests = Queue()
+        self.queue_thread = None
+        
     @property
     def actives(self):
         with self.lock_actives:
@@ -403,15 +408,33 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         :param str name: The websocket request name.
         :param dict msg: The websocket request msg.
         """
-        logger = logging.getLogger(__name__)
         data = json.dumps(dict(name=name, msg=msg, request_id=request_id))
-        while (self.global_value.ssl_Mutual_exclusion or self.global_value.ssl_Mutual_exclusion_write) \
-                and no_force_send:
-            pass
-        self.global_value.ssl_Mutual_exclusion_write = True
-        self.websocket.send(data)
-        logger.debug(data)
-        self.global_value.ssl_Mutual_exclusion_write = False
+        self._queue_websocket_requests.put(data)
+
+    def worker_websocket_send_request(self):
+        logger = logging.getLogger(__name__)
+        while 1:
+            if not self._queue_websocket_requests.empty():
+                data = self._queue_websocket_requests.get()
+                logger.debug(data)
+                self.websocket.send(data)
+                self._queue_websocket_requests.task_done()
+            time.sleep(.001)
+
+    # def send_websocket_request(self, name, msg, request_id="", no_force_send=True):
+    #     """Send websocket request to IQ Option server.
+    #     :param str name: The websocket request name.
+    #     :param dict msg: The websocket request msg.
+    #     """
+    #     logger = logging.getLogger(__name__)
+    #     data = json.dumps(dict(name=name, msg=msg, request_id=request_id))
+    #     while (self.global_value.ssl_Mutual_exclusion or self.global_value.ssl_Mutual_exclusion_write) \
+    #             and no_force_send:
+    #         time.sleep(.01)
+    #     self.global_value.ssl_Mutual_exclusion_write = True
+    #     self.websocket.send(data)
+    #     logger.debug(data)
+    #     self.global_value.ssl_Mutual_exclusion_write = False
         
     @property
     def logout(self):
@@ -875,6 +898,10 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
                                                      )
             self.websocket_thread.daemon = True
             self.websocket_thread.start()
+            
+            self.queue_thread = threading.Thread(target=self.worker_websocket_send_request, daemon=True)
+            self.queue_thread.start()
+            
         except Exception as exception:
             logging.error('websocket-connection-> {}'.format(exception))
         while 1:
@@ -959,10 +986,11 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
 
     def close(self):
         self.websocket.close()
+        self.queue_thread.join(1)
         self.websocket_thread.join(1)
 
     def websocket_alive(self):
-        return self.websocket_thread.is_alive()
+        return self.websocket_thread.is_alive() and self.queue_thread.is_alive()
 
     @property
     def Get_User_Profile_Client(self):
