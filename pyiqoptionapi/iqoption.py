@@ -480,7 +480,8 @@ class IQOption:
             logging.error(e)
             return {}
 
-    def get_positional_ranking_traders(self, country='Worldwide', from_position=1, to_position=100, pooling_time=30) -> dict:
+    def get_positional_ranking_traders(self, country='Worldwide', from_position=1, to_position=100,
+                                       pooling_time=30) -> dict:
         """ Function to get top ten countries
 
          return:
