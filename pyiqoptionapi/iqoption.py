@@ -1243,7 +1243,7 @@ class IQOption:
 
     # __________________FOR OPTION____________________________
 
-    def buy_multi(self, prices_list, actives_list, directions_list, expirations_list) -> list:
+    def buy_multi(self, prices_list: list, actives_list: list, directions_list: list, expirations_list: list) -> list:
         """
                Function for buy list binary or turbo option by raw expirations
 
@@ -1294,7 +1294,8 @@ class IQOption:
                 return remaning[1]
         return 0
 
-    def buy_by_raw_expirations(self, price, active, direction, type_option, expired) -> tuple:
+    def buy_by_raw_expirations(self, price: float, active: str, direction: str, type_option: str,
+                               expired: int) -> tuple:
         """
         Function for buy binary or turbo option by raw expirations
 
@@ -1346,7 +1347,7 @@ class IQOption:
                     return self.api.result, id_order
             time.sleep(.2)
 
-    def buy(self, price, active, direction, expirations=1) -> tuple:
+    def buy(self, price: float, active: str, direction: str, expirations=1) -> tuple:
         """
         Function for buy binary or turbo option
 
@@ -1781,7 +1782,7 @@ class IQOption:
         finally:
             return response
 
-    def buy_digital_spot(self, active, amount, action, duration):
+    def buy_digital_spot(self, active: str, amount: float, action: str, duration: int) -> tuple:
         # Expiration time need to be formatted like this: YYYYMMDDHHII
         # And need to be on GMT time
         # Type - P or C
@@ -1791,7 +1792,7 @@ class IQOption:
             action = 'C'
         else:
             logging.error('buy_digital_spot active error')
-            return -1
+            return False, 'active error'
         # doEURUSD201907191250PT5MPSPT
         timestamp = int(self.api.timesync.server_timestamp)
         if duration == 1:
@@ -1818,7 +1819,7 @@ class IQOption:
                         return False, self.api.digital_option_placed_id
             time.sleep(.2)
 
-    def get_digital_spot_profit_after_sale(self, position_id) -> float:
+    def get_digital_spot_profit_after_sale(self, position_id: int) -> float:
         """
         Function for get profit after sale for digital option
 
