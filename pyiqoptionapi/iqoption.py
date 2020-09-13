@@ -481,7 +481,7 @@ class IQOption:
             return {}
 
     def get_positional_ranking_traders(self, country='Worldwide', from_position=1, to_position=100,
-                                       pooling_time=30) -> dict:
+                                       pooling_time=30, format='pandas') -> dict:
         """ Function to get top ten countries
 
          return:
@@ -532,11 +532,24 @@ class IQOption:
                     if to_ > to_position:
                         to_ = to_position
                     time.sleep(.2)
-                return process_data(data)
+                if format == 'pandas':
+                    return process_data(data)
+                else:
+                    result = defaultdict(dict)
+                    for d in data:
+                        for k, v in d:
+                            result[k] = v
+                    return result
             else:
-                return process_data([self.get_leader_board(country=country, from_position=from_position,
-                                                           to_position=to_position,
-                                                           pooling_time=pooling_time)['positional']])
+                if format == 'pandas':
+                    return process_data([self.get_leader_board(country=country, from_position=from_position,
+                                                               to_position=to_position,
+                                                               pooling_time=pooling_time)['positional']])
+                else:
+                    return self.get_leader_board(country=country,
+                                                 from_position=from_position,
+                                                 to_position=to_position,
+                                                 pooling_time=pooling_time)
         except KeyError:
             logging.error('error getting positional ranking {} from {} to {}'.format(country,
                                                                                      from_position, to_position))
