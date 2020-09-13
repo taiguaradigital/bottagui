@@ -549,7 +549,7 @@ class IQOption:
                     return self.get_leader_board(country=country,
                                                  from_position=from_position,
                                                  to_position=to_position,
-                                                 pooling_time=pooling_time)
+                                                 pooling_time=pooling_time)['positional']
         except KeyError:
             logging.error('error getting positional ranking {} from {} to {}'.format(country,
                                                                                      from_position, to_position))
