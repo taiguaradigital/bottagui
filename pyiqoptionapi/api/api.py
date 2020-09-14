@@ -17,12 +17,6 @@ from pyiqoptionapi.http.buyback import Buyback
 from pyiqoptionapi.http.changebalance import Changebalance
 from pyiqoptionapi.http.events import Events
 from pyiqoptionapi.ws.client import WebsocketClient
-from pyiqoptionapi.ws.chanels.get_balance import *
-
-# from pyiqoptionapi.ws.chanels.ssid import Ssid
-# from pyiqoptionapi.ws.chanels.subscribe import *
-# from pyiqoptionapi.ws.chanels.unsubscribe import *
-# from pyiqoptionapi.ws.chanels.setactives import SetActives
 from pyiqoptionapi.ws.chanels import *
 
 from pyiqoptionapi.ws.chanels.candles import GetCandles
@@ -52,7 +46,7 @@ from pyiqoptionapi.ws.chanels.heartbeat import Heartbeat
 from pyiqoptionapi.ws.chanels.digital_option import *
 from pyiqoptionapi.ws.chanels.api_game_getoptions import *
 from pyiqoptionapi.ws.chanels.sell_option import SellOption
-from pyiqoptionapi.ws.chanels.change_tpsl import Change_Tpsl
+from pyiqoptionapi.ws.chanels.change_tpsl import ChangeOrderTPSL
 from pyiqoptionapi.ws.chanels.change_auto_margin_call import ChangeAutoMarginCall
 
 from pyiqoptionapi.ws.objects.timesync import TimeSync
@@ -816,7 +810,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
 
     @property
     def change_order(self):
-        return Change_Tpsl(self)
+        return ChangeOrderTPSL(self)
 
     @property
     def change_auto_margin_call(self):

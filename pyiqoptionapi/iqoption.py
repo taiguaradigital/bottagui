@@ -470,7 +470,8 @@ class IQOption:
             response = defaultdict(dict)
             countries = self.get_leader_board()['top_countries']
             for ranking in countries:
-                response[ranking] = {"country_name": self.api.countries.get_country_name(countries[ranking]['name_short']),
+                response[ranking] = {"country_name": self.api.countries.get_country_name(
+                                                     countries[ranking]['name_short']),
                                      "profit": countries[ranking]['profit']}
             return response
         except KeyError:
@@ -1086,12 +1087,11 @@ class IQOption:
 
     # -----------------traders_mood----------------------
 
-    def start_mood_stream(self, ACTIVES):
-        if ACTIVES not in self.subscribe_mood:
-            self.subscribe_mood.append(ACTIVES)
-
+    def start_mood_stream(self, actives):
+        if actives not in self.subscribe_mood:
+            self.subscribe_mood.append(actives)
         start = time.time()
-        actives = self.actives[ACTIVES]
+        actives = self.actives[actives]
         while 1:
             if time.time() - start > 60:
                 raise TimeoutError('tempo de resposta excedido')
@@ -1104,15 +1104,15 @@ class IQOption:
             except:
                 time.sleep(5)
 
-    def stop_mood_stream(self, ACTIVES):
-        if ACTIVES in self.subscribe_mood == True:
-            del self.subscribe_mood[ACTIVES]
-        self.api.unsubscribe_Traders_mood(self.actives[ACTIVES])
+    def stop_mood_stream(self, actives):
+        if actives in self.subscribe_mood == True:
+            del self.subscribe_mood[actives]
+        self.api.unsubscribe_Traders_mood(self.actives[actives])
 
-    def get_traders_mood(self, ACTIVES):
+    def get_traders_mood(self, actives):
         # return highter %
         with self.api.lock_mood:
-            return self.api.traders_mood[self.actives[ACTIVES]]
+            return self.api.traders_mood[self.actives[actives]]
 
     def get_all_traders_mood(self):
         # return highter %
@@ -1138,13 +1138,13 @@ class IQOption:
             check, data = self.get_betinfo(id_number)
             try:
                 win = data["result"]["data"][str(id_number)]["win"]
-            except:
+            except (KeyError, IndexError):
                 pass
             if check and win != "":
                 try:
                     return data["result"]["data"][str(id_number)]["profit"] - data["result"]["data"][str(id_number)][
                         "deposit"]
-                except:
+                except (KeyError, IndexError):
                     pass
             time.sleep(polling_time)
 
@@ -1307,7 +1307,11 @@ class IQOption:
                 return remaning[1]
         return 0
 
-    def buy_by_raw_expirations(self, price: float, active: str, direction: str, type_option: str,
+    def buy_by_raw_expirations(self,
+                               price: float,
+                               active: str,
+                               direction: str,
+                               type_option: str,
                                expired: int) -> tuple:
         """
         Function for buy binary or turbo option by raw expirations
@@ -1927,28 +1931,28 @@ class IQOption:
         with self.api.lock_digital_option_placed_id:
             self.api.digital_option_placed_id = None
         self.api.place_digital_option(instrument_id, amount)
-        time.sleep(1)
+        time.sleep(.2)
         start = time.time()
         while 1:
             with self.api.lock_digital_option_placed_id:
-                if self.api.digital_option_placed_id != None:
+                if self.api.digital_option_placed_id:
                     return True, self.api.digital_option_placed_id
             if time.time() - start > 30:
                 logging.error('buy_digital loss digital_option_placed_id')
                 return False, None
-            time.sleep(.2)
+            time.sleep(.1)
 
     def close_digital_option(self, position_id):
         with self.api.lock_buy_multi:
             self.api.result = None
         while self.get_async_order(position_id)["position-changed"] == {}:
-            time.sleep(.2)
+            time.sleep(.1)
         position_changed = self.get_async_order(position_id)["position-changed"]["msg"]
         self.api.close_digital_option(position_changed["external_id"])
-        time.sleep(1)
+        time.sleep(.2)
         while 1:
             with self.api.lock_buy_multi:
-                if self.api.result != None:
+                if self.api.result:
                     return self.api.result
 
     def check_win_digital(self, buy_order_id, polling_time=1):
@@ -1993,7 +1997,7 @@ class IQOption:
                     return False, None
             else:
                 return False, None
-        except:
+        except (KeyError, IndexError):
             return False, None
 
     async def check_win_digital_v3_async(self, buy_order_id):
@@ -2009,7 +2013,7 @@ class IQOption:
                     return False, None
             else:
                 return False, None
-        except:
+        except (KeyError, IndexError):
             return False, None
     # ----------------------------------------------------------
     # -----------------BUY_for__Forex__&&__stock(cfd)__&&__ctrpto
@@ -2059,46 +2063,60 @@ class IQOption:
         else:
             return False, None
 
-    def change_auto_margin_call(self, ID_Name, ID, auto_margin_call):
+    def change_auto_margin_call(self,
+                                id_name,
+                                id_,
+                                auto_margin_call):
         with self.api.lock_auto_margin_call_changed:
             self.api.auto_margin_call_changed_respond = None
-        self.api.change_auto_margin_call(ID_Name, ID, auto_margin_call)
-        time.sleep(1)
+        self.api.change_auto_margin_call(id_name, id_, auto_margin_call)
+        time.sleep(.2)
         while 1:
             with self.api.lock_auto_margin_call_changed:
-                if self.api.auto_margin_call_changed_respond != None:
+                if self.api.auto_margin_call_changed_respond:
                     if self.api.auto_margin_call_changed_respond["status"] == 2000:
                         return True, self.api.auto_margin_call_changed_respond
                     else:
                         return False, self.api.auto_margin_call_changed_respond
             time.sleep(.2)
 
-    def change_order(self, ID_Name, order_id,
-                     stop_lose_kind, stop_lose_value,
-                     take_profit_kind, take_profit_value,
-                     use_trail_stop, auto_margin_call):
+    def change_order(self,
+                     id_name,
+                     order_id,
+                     stop_lose_kind,
+                     stop_lose_value,
+                     take_profit_kind,
+                     take_profit_value,
+                     use_trail_stop,
+                     auto_margin_call):
         check = True
-        if ID_Name == "position_id":
+        if id_name == "position_id":
             check, order_data = self.get_order(order_id)
             position_id = order_data["position_id"]
-            ID = position_id
-        elif ID_Name == "order_id":
-            ID = order_id
+            id_ = position_id
+        elif id_name == "order_id":
+            id_ = order_id
         else:
             logging.error('change_order input error ID_Name')
 
         if check:
             with self.api.lock_tpsl_changed_respond:
                 self.api.tpsl_changed_respond = None
-            self.api.change_order(ID_Name=ID_Name, ID=ID, stop_lose_kind=stop_lose_kind,
-                                  stop_lose_value=stop_lose_value, take_profit_kind=take_profit_kind,
-                                  take_profit_value=take_profit_value, use_trail_stop=use_trail_stop)
-            time.sleep(.5)
-            self.change_auto_margin_call(ID_Name=ID_Name, ID=ID, auto_margin_call=auto_margin_call)
-            time.sleep(1)
+            self.api.change_order(id_name=id_name,
+                                  id_=id_,
+                                  stop_lose_kind=stop_lose_kind,
+                                  stop_lose_value=stop_lose_value,
+                                  take_profit_kind=take_profit_kind,
+                                  take_profit_value=take_profit_value,
+                                  use_trail_stop=use_trail_stop)
+            time.sleep(.2)
+            self.change_auto_margin_call(id_name=id_name,
+                                         id_=id_,
+                                         auto_margin_call=auto_margin_call)
+            time.sleep(.2)
             while 1:
                 with self.api.lock_tpsl_changed_respond:
-                    if self.api.tpsl_changed_respond != None:
+                    if self.api.tpsl_changed_respond:
                         if self.api.tpsl_changed_respond["status"] == 2000:
                             return True, self.api.tpsl_changed_respond["msg"]
                         else:
@@ -2502,7 +2520,10 @@ class IQOption:
         """
         return self.api.live_deal_data_digital.get_live_deals(active, buffer)
 
-    def get_live_deal_binary(self, active, turbo=True, buffer=0) -> deque:
+    def get_live_deal_binary(self,
+                             active,
+                             turbo=True,
+                             buffer=0) -> deque:
         """Function to return all registered trades for the specified asset for the current session
 
            Returns a deque containing a dict of live deals returned of IQ Option server

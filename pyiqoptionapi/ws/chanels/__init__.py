@@ -59,7 +59,7 @@ from pyiqoptionapi.ws.chanels.heartbeat import Heartbeat
 from pyiqoptionapi.ws.chanels.digital_option import *
 from pyiqoptionapi.ws.chanels.api_game_getoptions import *
 from pyiqoptionapi.ws.chanels.sell_option import SellOption
-from pyiqoptionapi.ws.chanels.change_tpsl import Change_Tpsl
+from pyiqoptionapi.ws.chanels.change_tpsl import ChangeOrderTPSL
 from pyiqoptionapi.ws.chanels.change_auto_margin_call import ChangeAutoMarginCall
 
 from pyiqoptionapi.ws.objects.timesync import TimeSync
