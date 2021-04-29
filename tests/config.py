@@ -4,5 +4,5 @@ import logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
 
 # 579121
-email = "taiguaradigitai@gmail.com"
-password = "maima389"
+email = ""
+password = ""
